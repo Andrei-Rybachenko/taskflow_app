@@ -1,5 +1,8 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
 
+from pydantic_settings import BaseSettings
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
     MODE: str
@@ -18,7 +21,7 @@ class Settings(BaseSettings):
     #                                   env_file_encoding="utf-8")
 
     class Config:
-        env_file = ".env"
+        env_file=BASE_DIR / ".env"
 
 
 settings = Settings()
