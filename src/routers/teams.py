@@ -269,3 +269,121 @@ async def update_task(
     await db.refresh(task)
 
     return task
+
+
+@teams_router.get('/{team_id}',
+                  response_model=TeamRead,
+                  status_code=status.HTTP_200_OK)
+async def get_team_by_id(
+        team_id: int,
+        current_user: User = Depends(manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    """
+
+        Ручка возвращает команду по id.
+
+    """
+
+    stmt = select(TeamORM).where(TeamORM.id==team_id)
+    team = await db.scalar(stmt)
+
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такой команды не существует"
+        )
+
+    return team
+
+
+@teams_router.get('/{team_id}/tasks',
+                  response_model=list[TaskRead],
+                  status_code=status.HTTP_200_OK)
+async def get_tasks_by_team_id(
+        team_id: int,
+        current_user: User = Depends(manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    """
+
+        Ручка возвращает задачи команды по id.
+
+    """
+
+    stmt = select(TaskORM).where(TaskORM.team_id==team_id)
+    result = await db.scalars(stmt)
+    tasks = result.all()
+
+    if not tasks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="У данной команды пока нет задач"
+        )
+
+    return tasks
+
+
+@teams_router.get('/{team_id}/tasks/{task_id}',
+                  response_model=TaskRead,
+                  status_code=status.HTTP_200_OK)
+async def get_task_by_id(
+        team_id: int,
+        task_id: int,
+        _: User = Depends(admin_or_manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    """
+
+        Ручка возвращает задачу по id.
+
+    """
+
+    stmt = select(TaskORM).where(
+        TaskORM.team_id==team_id,
+        TaskORM.id==task_id
+    )
+
+    task = await db.scalar(stmt)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такой задачи не существует"
+        )
+
+    return task
+
+
+@teams_router.delete('/{team_id}/tasks/{task_id}',
+                  status_code=status.HTTP_204_NO_CONTENT)
+async def get_task_by_id(
+        team_id: int,
+        task_id: int,
+        _: User = Depends(admin_or_manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    """
+
+        Ручка удаляет задачу по id.
+
+    """
+
+    stmt = select(TaskORM).where(
+        TaskORM.team_id==team_id,
+        TaskORM.id==task_id
+    )
+    task = await db.scalar(stmt)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такой задачи не существует"
+        )
+
+    await db.delete(task)
+    await db.commit()
+
+
+
+
