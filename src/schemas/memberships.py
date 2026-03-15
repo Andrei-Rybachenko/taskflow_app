@@ -9,7 +9,7 @@ from src.enums import Role
 
 class MembershipCreate(BaseModel):
     user_id: int
-    team_id: int
+    # team_id: int
     role: Role
 
 
@@ -23,7 +23,7 @@ class MembershipRead(BaseModel):
     role: Role
     joined_at: datetime
 
-    # user: UserShort
+    user: UserShort
     # team: TeamShort
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -9,18 +10,14 @@ from src.enums import TaskStatus
 class TaskCreate(BaseModel):
     title: str
     description: str
-    executor_id: int | None
-    team_id: int
     deadline: datetime
 
 
 class TaskUpdate(BaseModel):
-    title: str | None
-    description: str | None
-    executor_id: int | None
-    team_id: int | None
-    deadline: datetime | None
-    status: TaskStatus | None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    deadline: Optional[datetime] = None
+    status: Optional[TaskStatus] = None
 
 
 class TaskRead(BaseModel):
