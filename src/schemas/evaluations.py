@@ -5,8 +5,6 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class EvaluationCreate(BaseModel):
-    task_id: int
-    employee_id: int
     score: Annotated[int, Field(ge=1, le=5)]
     comment: str | None
 

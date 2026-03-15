@@ -6,7 +6,6 @@ from src.schemas.common_schemas import UserShort, TeamShort
 
 class MeetingCreate(BaseModel):
     title: str
-    team_id: int
     start_time: datetime
     end_time: datetime
 

@@ -7,11 +7,15 @@ from starlette import status
 from src.auth.schemas import UserRead
 from src.auth.users import current_active_user
 from src.enums import Role
-from src.models import User, TaskORM, MembershipORM
+from src.models import User, TaskORM, MembershipORM, MeetingORM
 from src.database import get_async_session
-from src.dependencies import admin_required, manager_required, admin_or_manager_required
+from src.dependencies import admin_required, manager_required, admin_or_manager_required, team_member_required
+from src.models.comments import CommentORM
+from src.models.evaluations import EvaluationORM
 from src.models.teams import TeamORM
-from src.schemas import TaskRead, TaskCreate, MembershipCreate, MembershipRead, MembershipUpdate, TaskUpdate
+from src.schemas import TaskRead, TaskCreate, MembershipCreate, MembershipRead, MembershipUpdate, TaskUpdate, \
+    CommentRead, CommentCreate, EvaluationRead, EvaluationCreate, MeetingRead, MeetingCreate
+from src.schemas.common_schemas import MembershipShort
 from src.schemas.teams import TeamRead, TeamCreate
 
 
@@ -84,7 +88,7 @@ async def create_task(team_id: int,
 
 
 @teams_router.post("/{team_id}/members",
-                   response_model=MembershipRead,
+                   response_model=MembershipShort,
                    status_code=status.HTTP_201_CREATED)
 async def add_member(team_id: int,
                      membership_create: MembershipCreate,
@@ -226,7 +230,7 @@ async def change_role(
     return membership
 
 
-@teams_router.patch("/{team_id}/tasks{task_id}",
+@teams_router.patch("/{team_id}/tasks/{task_id}",
                   response_model=TaskRead,
                   status_code=status.HTTP_200_OK)
 async def update_task(
@@ -276,7 +280,7 @@ async def update_task(
                   status_code=status.HTTP_200_OK)
 async def get_team_by_id(
         team_id: int,
-        current_user: User = Depends(manager_required),
+        current_user: User = Depends(admin_or_manager_required),
         db: AsyncSession = Depends(get_async_session)):
 
     """
@@ -310,6 +314,15 @@ async def get_tasks_by_team_id(
         Ручка возвращает задачи команды по id.
 
     """
+
+    stmt = select(TeamORM).where(TeamORM.id==team_id)
+    team = await db.scalar(stmt)
+
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Такой команды не существует"
+        )
 
     stmt = select(TaskORM).where(TaskORM.team_id==team_id)
     result = await db.scalars(stmt)
@@ -357,7 +370,7 @@ async def get_task_by_id(
 
 @teams_router.delete('/{team_id}/tasks/{task_id}',
                   status_code=status.HTTP_204_NO_CONTENT)
-async def get_task_by_id(
+async def delete_task_by_id(
         team_id: int,
         task_id: int,
         _: User = Depends(admin_or_manager_required),
@@ -365,7 +378,7 @@ async def get_task_by_id(
 
     """
 
-        Ручка удаляет задачу по id.
+    Ручка удаляет задачу по id.
 
     """
 
@@ -385,5 +398,229 @@ async def get_task_by_id(
     await db.commit()
 
 
+@teams_router.post('/{team_id}/tasks/{task_id}/comments',
+                   response_model=CommentRead,
+                   status_code=status.HTTP_201_CREATED)
+async def add_comment_to_task(
+        team_id: int,
+        task_id: int,
+        comment: CommentCreate,
+        current_user: User = Depends(team_member_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = (select(TaskORM)
+            .where(TaskORM.id==task_id,
+                   TaskORM.team_id==team_id
+                   ))
+    task = await db.scalar(stmt)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Задача не найдена"
+        )
+
+    new_comment = CommentORM(**comment.model_dump(),
+                             task_id=task_id,
+                             author_id=current_user.id)
+
+    db.add(new_comment)
+    await db.commit()
+    await db.refresh(new_comment)
+
+    return new_comment
 
 
+@teams_router.get('/{team_id}/tasks/{task_id}/comments',
+                   response_model=list[CommentRead],
+                   status_code=status.HTTP_200_OK)
+async def get_comments_for_task(
+        team_id: int,
+        task_id: int,
+        current_user: User = Depends(team_member_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = (select(TaskORM)
+            .where(TaskORM.id==task_id,
+                   TaskORM.team_id==team_id)
+            .options(joinedload(TaskORM.comments)))
+
+    task = await db.scalar(stmt)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Задача не найдена"
+        )
+
+    return task.comments
+
+
+@teams_router.delete('/{team_id}/tasks/{task_id}/comments/{comment_id}',
+                  status_code=status.HTTP_204_NO_CONTENT)
+async def delete_comment_by_id(
+        team_id: int,
+        task_id: int,
+        comment_id: int,
+        current_user: User = Depends(team_member_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = (select(CommentORM)
+            .join(TaskORM, TaskORM.id==CommentORM.task_id)
+            .where(CommentORM.task_id==task_id,
+                   CommentORM.id==comment_id,
+                   TaskORM.team_id==team_id))
+
+    comment = await db.scalar(stmt)
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Комментарий не найден."
+        )
+
+    if comment.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет прав на удаление комментария."
+        )
+
+    await db.delete(comment)
+    await db.commit()
+
+
+@teams_router.post('/{team_id}/tasks/{task_id}/score',
+                  response_model=EvaluationRead,
+                  status_code=status.HTTP_201_CREATED)
+async def add_score_for_task(
+        team_id: int,
+        task_id: int,
+        score: EvaluationCreate,
+        current_user: User = Depends(manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = (select(TaskORM)
+            .where(TaskORM.id==task_id,
+                   TaskORM.team_id==team_id))
+
+    task = await db.scalar(stmt)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Задача не найдена"
+        )
+
+    if not task.executor_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Задача еще не назначена исполнителю"
+        )
+
+    stmt = select(EvaluationORM).where(EvaluationORM.task_id==task_id)
+    existing = await db.scalar(stmt)
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Оценка для задачи уже выставлена."
+        )
+
+    task_score = EvaluationORM(**score.model_dump(),
+                               task_id=task_id,
+                               employee_id=task.executor_id)
+
+    db.add(task_score)
+    await db.commit()
+    await db.refresh(task_score)
+
+    return task_score
+
+
+
+@teams_router.get('/{team_id}/tasks/{task_id}/score',
+                  response_model=EvaluationRead,
+                  status_code=status.HTTP_200_OK)
+async def get_scores_for_task_by_id(
+        team_id: int,
+        task_id: int,
+        current_user: User = Depends(admin_or_manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = (select(TaskORM)
+            .where(TaskORM.id == task_id,
+                   TaskORM.team_id == team_id)
+            .options(joinedload(TaskORM.evaluation)))
+
+    task = await db.scalar(stmt)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Задача не найдена"
+        )
+
+    if not task.evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Оценка для задачи еще не выставлена."
+        )
+    return task.evaluation
+
+
+@teams_router.post('/{team_id}/meetings',
+                  response_model=MeetingRead,
+                  status_code=status.HTTP_201_CREATED)
+async def create_meeting(
+        team_id: int,
+        meeting_data: MeetingCreate,
+        current_user: User = Depends(admin_or_manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    new_meeting = MeetingORM(**meeting_data.model_dump(),
+                             team_id=team_id)
+
+    db.add(new_meeting)
+    await db.commit()
+    await db.refresh(new_meeting)
+
+    return new_meeting
+
+
+@teams_router.get('/{team_id}/meetings',
+                  response_model=list[MeetingRead],
+                  status_code=status.HTTP_200_OK)
+async def get_meetings(
+        team_id: int,
+        current_user: User = Depends(admin_or_manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = select(MeetingORM).where(MeetingORM.team_id==team_id)
+    result = await db.scalars(stmt)
+    meetings = result.all()
+
+    return meetings
+
+
+@teams_router.delete('/{team_id}/meetings/{meeting_id}',
+                  status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting_by_id(
+        team_id: int,
+        meeting_id: int,
+        current_user: User = Depends(admin_or_manager_required),
+        db: AsyncSession = Depends(get_async_session)):
+
+    stmt = (select(MeetingORM)
+            .where(MeetingORM.team_id == team_id,
+                   MeetingORM.id==meeting_id))
+
+    meeting = await db.scalar(stmt)
+
+    if not meeting:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Встреча не найдена."
+        )
+
+    await db.delete(meeting)
+    await db.commit()

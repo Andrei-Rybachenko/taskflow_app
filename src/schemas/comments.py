@@ -6,7 +6,6 @@ from src.schemas.common_schemas import UserShort, TaskShort
 
 
 class CommentCreate(BaseModel):
-    task_id: int
     content: str
 
 

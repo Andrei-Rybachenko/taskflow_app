@@ -44,6 +44,30 @@ async def get_users(db: AsyncSession = Depends(get_async_session)):
     return result.all()
 
 
+@users_router.get("/me/teams",
+                  response_model=list[TeamShort],
+                  status_code=status.HTTP_200_OK)
+async def get_user_teams(
+        current_user: User = Depends(current_active_user),
+        db: AsyncSession = Depends(get_async_session)):
+
+    """
+
+    Ручка возвращает все команды, в которых состоит текущий пользователь.
+
+    """
+
+    stmt = (select(TeamORM)
+            .join(TeamORM.memberships)
+            .where(MembershipORM.user_id==current_user.id))
+
+    result = await db.scalars(stmt)
+    user_teams = result.all()
+
+    return user_teams
+
+
+
 @users_router.get("/{user_id}/teams",
                   response_model=list[TeamShort],
                   status_code=status.HTTP_200_OK)
@@ -61,29 +85,6 @@ async def get_user_teams(
     stmt = (select(TeamORM)
             .join(TeamORM.memberships)
             .where(MembershipORM.user_id==user_id))
-
-    result = await db.scalars(stmt)
-    user_teams = result.all()
-
-    return user_teams
-
-
-@users_router.get("/me/teams",
-                  response_model=list[TeamShort],
-                  status_code=status.HTTP_200_OK)
-async def get_user_teams(
-        current_user: User = Depends(current_active_user),
-        db: AsyncSession = Depends(get_async_session)):
-
-    """
-
-    Ручка возвращает все команды, в которых состоит текущий пользователь.
-
-    """
-
-    stmt = (select(TeamORM)
-            .join(TeamORM.memberships)
-            .where(MembershipORM.user_id==current_user.id))
 
     result = await db.scalars(stmt)
     user_teams = result.all()
