@@ -4,6 +4,7 @@ from fastapi_users.authentication import AuthenticationBackend
 from fastapi_users.authentication import BearerTransport
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 from src.models.users import User
 
 from fastapi import Depends
@@ -47,4 +48,3 @@ auth_backend = AuthenticationBackend(
 
 fastapi_users = FastAPIUsers[User, int](get_user_manager, [auth_backend])
 
-current_active_user = fastapi_users.current_user(active=True)
