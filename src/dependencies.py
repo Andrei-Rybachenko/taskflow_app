@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from starlette import status
 
-from src.auth.utils import current_active_user
+from src.routers import current_active_user
 from src.database import get_async_session
 from src.enums import Role
 from src.models import MembershipORM

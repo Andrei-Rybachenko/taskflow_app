@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import status
+from sqlalchemy.orm import selectinload
 
 from src.models import User, MembershipORM
 from src.database import get_async_session
@@ -18,8 +19,8 @@ teams_router = APIRouter(
     tags=["teams"]
 )
 
-@teams_router.post('',
-                   response_model=TeamRead,
+@teams_router.post('/create',
+                   response_model=TeamShort,
                    status_code=status.HTTP_201_CREATED
                    )
 async def create_team(team: TeamCreate,
@@ -39,8 +40,8 @@ async def create_team(team: TeamCreate,
     return new_team
 
 
-@teams_router.get("",
-                  response_model=list[TeamRead],
+@teams_router.get("/all_teams",
+                  response_model=list[TeamShort],
                   status_code=status.HTTP_200_OK)
 async def get_teams(_: User = Depends(admin_required),
                     db: AsyncSession = Depends(get_async_session)):
@@ -71,7 +72,12 @@ async def get_team_by_id(
 
     """
 
-    stmt = select(TeamORM).where(TeamORM.id==team_id)
+    stmt = (select(TeamORM)
+            .where(TeamORM.id==team_id)
+            .options(selectinload(TeamORM.memberships),
+                     selectinload(TeamORM.meetings),
+                     selectinload(TeamORM.tasks)))
+
     team = await db.scalar(stmt)
 
     if not team:
@@ -83,7 +89,7 @@ async def get_team_by_id(
     return team
 
 
-@teams_router.get("/{user_id}",
+@teams_router.get("/user/{user_id}",
                   response_model=list[TeamShort],
                   status_code=status.HTTP_200_OK)
 async def get_user_teams(

@@ -32,9 +32,9 @@ class TeamORM(Base):
         "MeetingORM",
         back_populates="team")
 
-    # evaluations: Mapped[list["EvaluationORM"]] = relationship(
-    #     "EvaluationORM",
-    #     back_populates="team")
+    def __str__(self):
+        return self.name
+
 
 
 

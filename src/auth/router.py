@@ -5,14 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from starlette import status
 
-from src.auth.users import auth_backend, get_user_manager, fastapi_users
-from src.auth.utils import current_active_user
-from src.dependencies import admin_required
+from src.auth.users import auth_backend, fastapi_users
+from src.routers import current_active_user
 from src.models import TeamORM, MembershipORM
 from src.models.users import User
 from src.auth.schemas import UserRead, UserCreate, UserUpdate
 from src.database import get_async_session
-from src.schemas import TeamRead, MembershipRead
+from src.schemas import MembershipRead
 from src.schemas.common_schemas import TeamShort
 
 

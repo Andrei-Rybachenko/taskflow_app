@@ -31,3 +31,5 @@ class EvaluationORM(Base):
         foreign_keys=[employee_id]
     )
 
+    def __str__(self):
+        return self.comment

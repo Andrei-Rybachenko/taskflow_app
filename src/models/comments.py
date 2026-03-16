@@ -21,3 +21,6 @@ class CommentORM(Base):
         back_populates="comments"
     )
     author: Mapped["User"] = relationship("User")
+
+    def __str__(self):
+        return self.content

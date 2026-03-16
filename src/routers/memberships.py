@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from starlette import status
@@ -42,17 +42,17 @@ async def add_member(team_id: int,
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="User does not exist")
+                            detail="Пользователь не найден")
 
     stmt = (select(MembershipORM)
-            .where(MembershipORM.user_id==membership_create.user_id,
-                               MembershipORM.team_id==team_id))
+            .where(MembershipORM.user_id==user.id,
+                   MembershipORM.team_id==team_id))
 
     existing = await db.scalar(stmt)
 
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="User already in the team")
+                            detail="Пользователь уже состоит в команде.")
 
     new_membership = MembershipORM(**membership_create.model_dump(), team_id=team_id,)
     db.add(new_membership)

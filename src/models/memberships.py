@@ -24,3 +24,6 @@ class MembershipORM(Base):
         "TeamORM",
         back_populates="memberships"
     )
+
+    def __str__(self):
+        return f"{self.role} Команда {self.team_id}"

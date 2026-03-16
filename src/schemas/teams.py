@@ -19,9 +19,9 @@ class TeamRead(BaseModel):
     created_at: datetime
     owner_id: int
 
-    # memberships: list[MembershipShort]
-    # tasks: list[TaskShort]
-    # meetings: list[MeetingShort]
+    memberships: list[MembershipShort]
+    tasks: list[TaskShort]
+    meetings: list[MeetingShort]
 
     model_config = ConfigDict(from_attributes=True)
 

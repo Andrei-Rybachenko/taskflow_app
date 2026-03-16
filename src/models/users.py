@@ -32,3 +32,5 @@ class User(SQLAlchemyBaseUserTable[int], Base):
         back_populates="user"
     )
 
+    def __str__(self):
+        return self.username

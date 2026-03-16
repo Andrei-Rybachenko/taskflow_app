@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from src.schemas import CommentRead
 from src.schemas.common_schemas import UserShort, TeamShort, CommentShort
 from src.enums import TaskStatus
 
@@ -25,14 +26,14 @@ class TaskRead(BaseModel):
     title: str
     description: str
     executor_id: int | None
-    team_id: int
+    team_id: int | None = None
     creator_id: int
     deadline: datetime
     status: TaskStatus
 
-    # executor: UserShort | None
-    # team: TeamShort
-    # comments: list[CommentShort]
+    executor: UserShort | None
+    team: TeamShort | None
+    comments: list[CommentRead] | None
 
     model_config = ConfigDict(from_attributes=True)
 

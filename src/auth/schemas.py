@@ -15,8 +15,6 @@ class UserRead(schemas.BaseUser[int]):
     # meetings: list[MeetingShort] | None
     # memberships: list[MembershipShort] | None
 
-    # надо добавить исключение пароля из сериализации
-
     model_config = ConfigDict(from_attributes=True)
 
 

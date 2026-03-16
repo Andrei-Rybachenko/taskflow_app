@@ -45,3 +45,6 @@ class TaskORM(Base):
         back_populates="task",
         cascade="all, delete-orphan"
     )
+
+    def __str__(self):
+        return self.title or f"Task {self.id}"

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 from starlette import status
 
 from src.models import User, MeetingORM
@@ -22,11 +21,12 @@ meetings_router = APIRouter(
 async def create_meeting(
         team_id: int,
         meeting_data: MeetingCreate,
-        _: User = Depends(admin_or_manager_required),
+        current_user: User = Depends(admin_or_manager_required),
         db: AsyncSession = Depends(get_async_session)):
 
     new_meeting = MeetingORM(**meeting_data.model_dump(),
-                             team_id=team_id)
+                             team_id=team_id,
+                             creator_id=current_user.id)
 
     db.add(new_meeting)
     await db.commit()
