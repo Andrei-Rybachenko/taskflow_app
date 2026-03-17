@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Integer, String, Enum, ForeignKey, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -9,10 +10,16 @@ from src.models.comments import CommentORM
 from src.database import Base
 
 
+if TYPE_CHECKING:
+    from src.models.teams import TeamORM
+    from src.models.users import User
+
+
 class TaskORM(Base):
     """
     Таблица задач
     """
+
     __tablename__ = "tasks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -21,29 +28,28 @@ class TaskORM(Base):
     description: Mapped[str] = mapped_column(String(200))
     executor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus), default=TaskStatus.OPEN)
-    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
-                                                 server_default=func.now())
+    status: Mapped[TaskStatus] = mapped_column(
+        Enum(TaskStatus), default=TaskStatus.OPEN
+    )
+    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"),
+                                            nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     executor: Mapped["User"] = relationship(
-        "User",
-        back_populates="tasks",
-        foreign_keys=[executor_id])
+        "User", back_populates="tasks", foreign_keys=[executor_id]
+    )
 
-    team: Mapped["TeamORM"] = relationship(
-        "TeamORM",
-        back_populates="tasks")
+    team: Mapped["TeamORM"] = relationship("TeamORM",
+                                           back_populates="tasks")
 
     evaluation: Mapped["EvaluationORM"] = relationship(
-        "EvaluationORM",
-        back_populates="task",
-        uselist=False)
+        "EvaluationORM", back_populates="task", uselist=False
+    )
 
     comments: Mapped[list["CommentORM"]] = relationship(
-        "CommentORM",
-        back_populates="task",
-        cascade="all, delete-orphan"
+        "CommentORM", back_populates="task", cascade="all, delete-orphan"
     )
 
     def __str__(self):

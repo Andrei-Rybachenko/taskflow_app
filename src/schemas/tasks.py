@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 from src.schemas import CommentRead
-from src.schemas.common_schemas import UserShort, TeamShort, CommentShort
+from src.schemas.common_schemas import UserShort, TeamShort
 from src.enums import TaskStatus
 
 
@@ -36,5 +36,3 @@ class TaskRead(BaseModel):
     comments: list[CommentRead] | None
 
     model_config = ConfigDict(from_attributes=True)
-
-

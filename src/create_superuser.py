@@ -26,7 +26,7 @@ async def create_superuser():
                             email=email,
                             password=password,
                             username=username,
-                            is_superuser=True
+                            is_superuser=True,
                         )
                     )
                     print(f"User created {user}")
@@ -34,7 +34,7 @@ async def create_superuser():
     except UserAlreadyExists:
         print(f"User {email} already exists")
         raise
-    
+
 
 if __name__ == "__main__":
     asyncio.run(create_superuser())

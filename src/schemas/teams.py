@@ -24,7 +24,3 @@ class TeamRead(BaseModel):
     meetings: list[MeetingShort]
 
     model_config = ConfigDict(from_attributes=True)
-
-
-
-

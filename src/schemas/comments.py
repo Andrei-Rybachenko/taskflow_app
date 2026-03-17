@@ -2,9 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from src.schemas.common_schemas import UserShort, TaskShort
-
-
 class CommentCreate(BaseModel):
     content: str
 

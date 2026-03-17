@@ -10,24 +10,19 @@ from fastapi.responses import PlainTextResponse
 from src.database import get_async_session
 from src.models import TaskORM, MeetingORM
 
-calendar_router = APIRouter(
-    prefix="/calendar",
-    tags=["calendar"]
-)
+calendar_router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
 @calendar_router.get("/month", response_class=PlainTextResponse)
 async def get_month_calendar(
-    year: int,
-    month: int,
-    db: AsyncSession = Depends(get_async_session)
+    year: int, month: int, db: AsyncSession = Depends(get_async_session)
 ):
 
     events_per_day = defaultdict(int)
 
     tasks_stmt = select(TaskORM.deadline).where(
         extract("year", TaskORM.deadline) == year,
-        extract("month", TaskORM.deadline) == month
+        extract("month", TaskORM.deadline) == month,
     )
 
     tasks = (await db.scalars(tasks_stmt)).all()
@@ -37,7 +32,7 @@ async def get_month_calendar(
 
     meetings_stmt = select(MeetingORM.start_time).where(
         extract("year", MeetingORM.start_time) == year,
-        extract("month", MeetingORM.start_time) == month
+        extract("month", MeetingORM.start_time) == month,
     )
 
     meetings = (await db.scalars(meetings_stmt)).all()
@@ -68,23 +63,27 @@ async def get_month_calendar(
 
         lines.append(" ".join(row))
 
-
     return "\n".join(lines)
 
 
 @calendar_router.get("/day", response_class=PlainTextResponse)
 async def get_day_calendar(
-    calendar_date: date,
-    db: AsyncSession = Depends(get_async_session)
+    calendar_date: date, db: AsyncSession = Depends(get_async_session)
 ):
 
-    tasks = (await db.scalars(
-        select(TaskORM).where(func.date(TaskORM.deadline) == calendar_date)
-    )).all()
+    tasks = (
+        await db.scalars(
+            select(TaskORM)
+            .where(func.date(TaskORM.deadline) == calendar_date)
+        )
+    ).all()
 
-    meetings = (await db.scalars(
-        select(MeetingORM).where(func.date(MeetingORM.start_time) == calendar_date)
-    )).all()
+    meetings = (
+        await db.scalars(
+            select(MeetingORM)
+            .where(func.date(MeetingORM.start_time) == calendar_date)
+        )
+    ).all()
 
     lines = [f"{calendar_date}\n", "Tasks:"]
 

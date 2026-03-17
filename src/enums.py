@@ -5,6 +5,7 @@ class TaskStatus(str, enum.Enum):
     """
     Вспомогательный enum-класс
     """
+
     OPEN = "открыто"
     IN_PROGRESS = "в работе"
     FINISHED = "выполнено"

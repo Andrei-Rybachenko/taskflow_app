@@ -3,9 +3,6 @@ from fastapi_users import schemas
 from pydantic import ConfigDict
 
 
-from src.schemas.common_schemas import TaskShort, MeetingShort, MembershipShort
-
-
 class UserRead(schemas.BaseUser[int]):
     id: int
     username: str
@@ -20,7 +17,6 @@ class UserRead(schemas.BaseUser[int]):
 
 class UserCreate(schemas.BaseUserCreate):
     username: str
-
 
 
 class UserUpdate(schemas.BaseUserUpdate):

@@ -1,43 +1,59 @@
-from fastapi_users import models, FastAPIUsers
-from fastapi_users.authentication import JWTStrategy
-from fastapi_users.authentication import AuthenticationBackend
-from fastapi_users.authentication import BearerTransport
+from typing import Union
+
+from fastapi_users import models, FastAPIUsers, InvalidPasswordException
+from fastapi_users.authentication import (
+    JWTStrategy,
+    AuthenticationBackend,
+    BearerTransport,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
+from src.auth.schemas import UserCreate
 from src.models.users import User
-
 from fastapi import Depends
 from fastapi_users import BaseUserManager, IntegerIDMixin
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
-from starlette.requests import Request
 
 from src.database import get_async_session
 
-
-SECRET = "SECRET_KEY"
+from src.config import settings
 
 
 class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
-    reset_password_token_secret = SECRET
-    verification_token_secret = SECRET
 
-    async def on_after_register(self, user: User, request: Request | None = None):
-        print(f"User {user.id} has registered.")
+    async def validate_password(
+        self,
+        password: str,
+        user: Union[UserCreate, User],
+    ) -> None:
+        if len(password) < 8:
+            raise InvalidPasswordException(
+                reason="Пароль должен состоять минимум из 8 символов."
+            )
+
+        if password.isdigit():
+            raise InvalidPasswordException(
+                reason="Пароль не должен состоять только из цифр"
+            )
+
+        if user.email in password:
+            raise InvalidPasswordException(
+                reason="Пароль не должен содержать e-mail.")
 
 
 async def get_user_db(session: AsyncSession = Depends(get_async_session)):
     yield SQLAlchemyUserDatabase(session, User)
 
 
-async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
+async def get_user_manager(
+        user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
     yield UserManager(user_db)
+
 
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 
 
 def get_jwt_strategy() -> JWTStrategy[models.UP, models.ID]:
-    return JWTStrategy(secret=SECRET, lifetime_seconds=36000)
+    return JWTStrategy(secret=settings.SECRET, lifetime_seconds=3600)
 
 
 auth_backend = AuthenticationBackend(
@@ -47,4 +63,3 @@ auth_backend = AuthenticationBackend(
 )
 
 fastapi_users = FastAPIUsers[User, int](get_user_manager, [auth_backend])
-

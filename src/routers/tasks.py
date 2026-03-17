@@ -12,19 +12,15 @@ from src.schemas.common_schemas import TaskShort
 from src.schemas.tasks import TaskCreate, TaskRead, TaskUpdate
 from src.models.tasks import TaskORM
 
-
-tasks_router = APIRouter(
-    prefix="/tasks",
-    tags=["tasks"]
-)
+tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 @tasks_router.get("",
                   response_model=list[TaskRead],
                   status_code=status.HTTP_200_OK)
-async def get_all_tasks(_: User = Depends(admin_required),
-                        db: AsyncSession = Depends(get_async_session)):
-
+async def get_all_tasks(
+    _: User = Depends(admin_required), db: AsyncSession = Depends(get_async_session)
+):
     """
 
     Ручка возвращает все задачи.
@@ -41,10 +37,11 @@ async def get_all_tasks(_: User = Depends(admin_required),
                   response_model=list[TaskShort],
                   status_code=status.HTTP_200_OK)
 async def get_my_tasks(
-        current_user: User = Depends(current_active_user),
-        db: AsyncSession = Depends(get_async_session)):
+    current_user: User = Depends(current_active_user),
+    db: AsyncSession = Depends(get_async_session),
+):
 
-    stmt = select(TaskORM).where(TaskORM.executor_id==current_user.id)
+    stmt = select(TaskORM).where(TaskORM.executor_id == current_user.id)
 
     result = await db.scalars(stmt)
     tasks = result.all()
@@ -55,15 +52,17 @@ async def get_my_tasks(
     return tasks
 
 
-@tasks_router.post("/{team_id}/create",
-                   response_model=TaskRead,
-                   status_code=status.HTTP_201_CREATED)
-
-
-async def create_task(team_id: int,
-                      task: TaskCreate,
-                      current_user: User = Depends(admin_or_manager_required),
-                      db: AsyncSession = Depends(get_async_session)):
+@tasks_router.post(
+    "/{team_id}/create",
+    response_model=TaskRead,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_task(
+    team_id: int,
+    task: TaskCreate,
+    current_user: User = Depends(admin_or_manager_required),
+    db: AsyncSession = Depends(get_async_session),
+):
     """
 
     Ручка для создания задачи.
@@ -83,7 +82,7 @@ async def create_task(team_id: int,
         .options(
             selectinload(TaskORM.team),
             selectinload(TaskORM.comments),
-            selectinload(TaskORM.executor)
+            selectinload(TaskORM.executor),
         )
     )
 
@@ -92,22 +91,25 @@ async def create_task(team_id: int,
     return task
 
 
-@tasks_router.patch("/{task_id}/update",
-                  response_model=TaskRead,
-                  status_code=status.HTTP_200_OK)
+@tasks_router.patch(
+    "/{task_id}/update",
+    response_model=TaskRead,
+    status_code=status.HTTP_200_OK
+)
 async def update_task(
-        team_id: int,
-        task_id: int,
-        task_update: TaskUpdate,
-        _: User = Depends(admin_or_manager_required),
-        db: AsyncSession = Depends(get_async_session)):
+    team_id: int,
+    task_id: int,
+    task_update: TaskUpdate,
+    _: User = Depends(admin_or_manager_required),
+    db: AsyncSession = Depends(get_async_session),
+):
     """
 
     Ручка для изменения задачи.
 
     """
 
-    stmt = select(TeamORM).where(TeamORM.id==team_id)
+    stmt = select(TeamORM).where(TeamORM.id == team_id)
     team = await db.scalar(stmt)
 
     if not team:
@@ -116,7 +118,7 @@ async def update_task(
             detail="Команда не существует."
         )
 
-    stmt = select(TaskORM).where(TaskORM.id==task_id)
+    stmt = select(TaskORM).where(TaskORM.id == task_id)
     task = await db.scalar(stmt)
 
     if not task:
@@ -127,9 +129,9 @@ async def update_task(
 
     await db.execute(
         update(TaskORM)
-        .where(TaskORM.id==task_id)
+        .where(TaskORM.id == task_id)
         .values(**task_update.model_dump(exclude_unset=True))
-        )
+    )
 
     await db.commit()
     await db.refresh(task)
@@ -137,21 +139,23 @@ async def update_task(
     return task
 
 
-@tasks_router.get('/{team_id}/tasks',
-                  response_model=list[TaskShort],
-                  status_code=status.HTTP_200_OK)
+@tasks_router.get(
+    "/{team_id}/tasks",
+    response_model=list[TaskShort],
+    status_code=status.HTTP_200_OK
+)
 async def get_tasks_by_team_id(
-        team_id: int,
-        _: User = Depends(admin_or_manager_required),
-        db: AsyncSession = Depends(get_async_session)):
+    team_id: int,
+    _: User = Depends(admin_or_manager_required),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+
+    Ручка возвращает задачи команды по id.
 
     """
 
-        Ручка возвращает задачи команды по id.
-
-    """
-
-    stmt = select(TeamORM).where(TeamORM.id==team_id)
+    stmt = select(TeamORM).where(TeamORM.id == team_id)
     team = await db.scalar(stmt)
 
     if not team:
@@ -160,38 +164,42 @@ async def get_tasks_by_team_id(
             detail="Такой команды не существует"
         )
 
-    stmt = select(TaskORM).where(TaskORM.team_id==team_id)
+    stmt = select(TaskORM).where(TaskORM.team_id == team_id)
     result = await db.scalars(stmt)
     tasks = result.all()
 
     if not tasks:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="У данной команды пока нет задач"
+            detail="У данной команды пока нет задач",
         )
 
     return tasks
 
 
-@tasks_router.get('/{task_id}',
+@tasks_router.get("/{task_id}",
                   response_model=TaskRead,
                   status_code=status.HTTP_200_OK)
 async def get_task_by_id(
-        task_id: int,
-        _: User = Depends(admin_or_manager_required),
-        db: AsyncSession = Depends(get_async_session)):
-
+    task_id: int,
+    _: User = Depends(admin_or_manager_required),
+    db: AsyncSession = Depends(get_async_session),
+):
     """
 
     Ручка возвращает задачу по id.
 
     """
 
-    stmt = (select(TaskORM)
-            .where(TaskORM.id==task_id)
-            .options(selectinload(TaskORM.comments),
-                     selectinload(TaskORM.team),
-                     selectinload(TaskORM.executor)))
+    stmt = (
+        select(TaskORM)
+        .where(TaskORM.id == task_id)
+        .options(
+            selectinload(TaskORM.comments),
+            selectinload(TaskORM.team),
+            selectinload(TaskORM.executor),
+        )
+    )
 
     results = await db.execute(stmt)
     task = results.scalar()
@@ -205,20 +213,21 @@ async def get_task_by_id(
     return task
 
 
-@tasks_router.delete('/{task_id}/delete',
-                  status_code=status.HTTP_204_NO_CONTENT)
+@tasks_router.delete(
+    "/{task_id}/delete",
+            status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task_by_id(
-        task_id: int,
-        _: User = Depends(admin_or_manager_required),
-        db: AsyncSession = Depends(get_async_session)):
-
+    task_id: int,
+    _: User = Depends(admin_or_manager_required),
+    db: AsyncSession = Depends(get_async_session),
+):
     """
 
     Ручка удаляет задачу по id.
 
     """
 
-    stmt = select(TaskORM).where(TaskORM.id==task_id)
+    stmt = select(TaskORM).where(TaskORM.id == task_id)
     task = await db.scalar(stmt)
 
     if not task:
@@ -231,20 +240,27 @@ async def delete_task_by_id(
     await db.commit()
 
 
-@tasks_router.patch("/{task_id}/assign",
-                    response_model=TaskRead,
-                    status_code=status.HTTP_200_OK)
+@tasks_router.patch(
+    "/{task_id}/assign",
+    response_model=TaskRead,
+    status_code=status.HTTP_200_OK
+)
 async def assign_task_to_user(
-        task_id: int,
-        user_to_assign: int,
-        _: User = Depends(admin_or_manager_required),
-        db: AsyncSession = Depends(get_async_session)):
+    task_id: int,
+    user_to_assign: int,
+    _: User = Depends(admin_or_manager_required),
+    db: AsyncSession = Depends(get_async_session),
+):
 
-    stmt = (select(TaskORM)
-            .where(TaskORM.id == task_id)
-            .options(selectinload(TaskORM.comments),
-                     selectinload(TaskORM.team),
-                     selectinload(TaskORM.executor)))
+    stmt = (
+        select(TaskORM)
+        .where(TaskORM.id == task_id)
+        .options(
+            selectinload(TaskORM.comments),
+            selectinload(TaskORM.team),
+            selectinload(TaskORM.executor),
+        )
+    )
 
     task = await db.scalar(stmt)
 
@@ -257,19 +273,22 @@ async def assign_task_to_user(
     if task.executor_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Задача уже назначена другому исполнителю."
+            detail="Задача уже назначена другому исполнителю.",
         )
 
-    stmt = (select(MembershipORM)
-            .where(MembershipORM.user_id==user_to_assign,
-                   MembershipORM.team_id==task.team_id))
+    stmt = select(MembershipORM).where(
+        MembershipORM.user_id == user_to_assign,
+        MembershipORM.team_id == task.team_id
+    )
 
     membership = await db.scalar(stmt)
 
     if not membership:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Пользователю нельзя назначить эту задачу,"
-                                   " так как он принадлежит другой команде.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пользователю нельзя назначить эту задачу,"
+            " так как он принадлежит другой команде.",
+        )
 
     task.executor_id = user_to_assign
     await db.commit()

@@ -2,9 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from src.schemas.common_schemas import UserShort, TeamShort
+from src.schemas.common_schemas import UserShort
 from src.enums import Role
-
 
 
 class MembershipCreate(BaseModel):

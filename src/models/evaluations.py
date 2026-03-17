@@ -1,9 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Integer, ForeignKey, String, DateTime, func
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from src.database import Base
+
+if TYPE_CHECKING:
+    from src.models.tasks import TaskORM
+    from src.models.users import User
 
 
 class EvaluationORM(Base):
@@ -15,21 +20,15 @@ class EvaluationORM(Base):
     employee_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     score: Mapped[int] = mapped_column(Integer, default=0)
     comment: Mapped[str] = mapped_column(String(300), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     task: Mapped["TaskORM"] = relationship(
-        "TaskORM",
-        back_populates="evaluation",
-        uselist=False
+        "TaskORM", back_populates="evaluation", uselist=False
     )
-    reviewer: Mapped["User"] = relationship(
-        "User",
-        foreign_keys=[reviewer_id]
-    )
-    employee: Mapped["User"] = relationship(
-        "User",
-        foreign_keys=[employee_id]
-    )
+    reviewer: Mapped["User"] = relationship("User", foreign_keys=[reviewer_id])
+    employee: Mapped["User"] = relationship("User", foreign_keys=[employee_id])
 
     def __str__(self):
         return self.comment

@@ -1,8 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
-from src.schemas.common_schemas import UserShort, TeamShort
-
 
 class MeetingCreate(BaseModel):
     title: str
