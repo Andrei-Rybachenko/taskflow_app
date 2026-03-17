@@ -6,7 +6,7 @@ from starlette import status
 
 from src.routers import current_active_user
 from src.database import get_async_session
-from src.dependencies import admin_or_manager_required
+from src.dependencies import admin_or_manager_required, admin_required
 from src.models import User, TeamORM, MembershipORM
 from src.schemas.common_schemas import TaskShort
 from src.schemas.tasks import TaskCreate, TaskRead, TaskUpdate
@@ -22,7 +22,8 @@ tasks_router = APIRouter(
 @tasks_router.get("",
                   response_model=list[TaskRead],
                   status_code=status.HTTP_200_OK)
-async def get_all_tasks(db: AsyncSession = Depends(get_async_session)):
+async def get_all_tasks(_: User = Depends(admin_required),
+                        db: AsyncSession = Depends(get_async_session)):
 
     """
 
