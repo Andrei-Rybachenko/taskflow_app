@@ -27,10 +27,16 @@ class MembershipORM(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    user: Mapped["User"] = relationship("User",
-                                        back_populates="memberships")
-    team: Mapped["TeamORM"] = relationship("TeamORM",
-                                           back_populates="memberships")
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="memberships",
+        lazy="selectin"
+    )
+    team: Mapped["TeamORM"] = relationship(
+        "TeamORM",
+        back_populates="memberships",
+        lazy="selectin"
+    )
 
     def __str__(self):
         return f"{self.role} Команда {self.team_id}"

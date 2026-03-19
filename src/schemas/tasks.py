@@ -12,6 +12,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str
     deadline: datetime
+    team_id: int
 
 
 class TaskUpdate(BaseModel):
@@ -19,6 +20,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     deadline: Optional[datetime] = None
     status: Optional[TaskStatus] = None
+    team_id: Optional[int] = None
 
 
 class TaskRead(BaseModel):

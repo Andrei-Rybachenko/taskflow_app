@@ -29,14 +29,21 @@ class TeamORM(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     memberships: Mapped[list["MembershipORM"]] = relationship(
-        "MembershipORM", back_populates="team", cascade="all, delete-orphan"
+        "MembershipORM",
+        back_populates="team",
+        lazy="selectin",
+        cascade="all, delete-orphan"
     )
 
-    tasks: Mapped[list["TaskORM"]] = relationship("TaskORM",
-                                                  back_populates="team")
+    tasks: Mapped[list["TaskORM"]] = relationship(
+        "TaskORM",
+        back_populates="team",
+        lazy="selectin")
 
     meetings: Mapped[list["MeetingORM"]] = relationship(
-        "MeetingORM", back_populates="team"
+        "MeetingORM",
+        back_populates="team",
+        lazy="selectin"
     )
 
     def __str__(self):

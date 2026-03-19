@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 from src.admin.models import (
     UserAdmin,
@@ -16,6 +17,7 @@ from src.auth.router import (
     fastapi_users_router,
     users_router,
 )
+from src.routers.ui_router import ui_router
 from src.routers.calendar import calendar_router
 from src.routers.comments import comments_router
 from src.routers.evaluations import evaluations_router
@@ -48,6 +50,8 @@ app.include_router(evaluations_router)
 app.include_router(meetings_router)
 app.include_router(memberships_router)
 app.include_router(calendar_router)
+app.include_router(ui_router)
+
 
 
 admin = Admin(app=app, engine=async_engine, title="TaskFlowAdmin")
@@ -59,6 +63,11 @@ admin.add_view(MembershipsAdmin)
 admin.add_view(MeetingsAdmin)
 admin.add_view(CommentsAdmin)
 admin.add_view(EvaluationsAdmin)
+
+
+@app.get("/")
+async def root():
+    return RedirectResponse("/ui/")
 
 
 if __name__ == "__main__":

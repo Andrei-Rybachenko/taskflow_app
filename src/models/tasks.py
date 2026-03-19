@@ -38,18 +38,31 @@ class TaskORM(Base):
     )
 
     executor: Mapped["User"] = relationship(
-        "User", back_populates="tasks", foreign_keys=[executor_id]
+        "User",
+        back_populates="tasks",
+        foreign_keys=[executor_id],
+        lazy="selectin"
     )
 
-    team: Mapped["TeamORM"] = relationship("TeamORM",
-                                           back_populates="tasks")
+    team: Mapped["TeamORM"] = relationship(
+        "TeamORM",
+        back_populates="tasks",
+        lazy="selectin"
+    )
 
     evaluation: Mapped["EvaluationORM"] = relationship(
-        "EvaluationORM", back_populates="task", uselist=False
+        "EvaluationORM",
+        back_populates="task",
+        uselist=False,
+        lazy="selectin"
     )
 
     comments: Mapped[list["CommentORM"]] = relationship(
-        "CommentORM", back_populates="task", cascade="all, delete-orphan"
+        "CommentORM",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+
     )
 
     def __str__(self):

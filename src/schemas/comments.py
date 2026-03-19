@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 class CommentCreate(BaseModel):
+    task_id: int
     content: str
 
 

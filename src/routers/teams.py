@@ -1,39 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 from fastapi import status
-from sqlalchemy.orm import selectinload
 
-from src.models import User, MembershipORM
-from src.database import get_async_session
-from src.dependencies import admin_required, admin_or_manager_required
+from src.models import User
+from src.dependencies import admin_required, admin_or_manager_required, teams_service
 
-from src.models.teams import TeamORM
 from src.schemas.common_schemas import TeamShort
 
 from src.schemas.teams import TeamRead, TeamCreate
+from src.services.teams_service import TeamsService
+
 
 teams_router = APIRouter(prefix="/teams", tags=["teams"])
 
 
 @teams_router.post(
-    "/create", response_model=TeamShort, status_code=status.HTTP_201_CREATED
+    "/create",
+    response_model=TeamShort,
+    status_code=status.HTTP_201_CREATED
 )
 async def create_team(
     team: TeamCreate,
-    current_user: User = Depends(admin_required),
-    db: AsyncSession = Depends(get_async_session),
+    service: Annotated[TeamsService, Depends(teams_service)],
+    current_user: User = Depends(admin_required)
 ):
     """
-
     Ручка для создания команды.
-
     """
-
-    new_team = TeamORM(**team.model_dump(), owner_id=current_user.id)
-    db.add(new_team)
-    await db.commit()
-    await db.refresh(new_team)
+    new_team = await service.create(team, current_user.id)
 
     return new_team
 
@@ -44,18 +39,13 @@ async def create_team(
     status_code=status.HTTP_200_OK
 )
 async def get_teams(
-    _: User = Depends(admin_required),
-    db: AsyncSession = Depends(get_async_session)
+    service: Annotated[TeamsService, Depends(teams_service)],
+    _: User = Depends(admin_required)
 ):
     """
-
     Ручка возвращает все команды.
-
     """
-
-    stmt = select(TeamORM).order_by(TeamORM.id)
-    result = await db.scalars(stmt)
-    teams = result.all()
+    teams = await service.get_teams()
 
     return teams
 
@@ -65,32 +55,14 @@ async def get_teams(
                   status_code=status.HTTP_200_OK)
 async def get_team_by_id(
     team_id: int,
-    _: User = Depends(admin_or_manager_required),
-    db: AsyncSession = Depends(get_async_session),
+    service: Annotated[TeamsService, Depends(teams_service)],
+    _: User = Depends(admin_or_manager_required)
 ):
     """
-
     Ручка возвращает команду по id.
-
     """
 
-    stmt = (
-        select(TeamORM)
-        .where(TeamORM.id == team_id)
-        .options(
-            selectinload(TeamORM.memberships),
-            selectinload(TeamORM.meetings),
-            selectinload(TeamORM.tasks),
-        )
-    )
-
-    team = await db.scalar(stmt)
-
-    if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Такой команды не существует"
-        )
+    team = await service.get_team(team_id)
 
     return team
 
@@ -102,22 +74,12 @@ async def get_team_by_id(
 )
 async def get_user_teams(
     user_id: int,
-    _: User = Depends(admin_required),
-    db: AsyncSession = Depends(get_async_session),
+    service: Annotated[TeamsService, Depends(teams_service)],
+    _: User = Depends(admin_required)
 ):
     """
-
     Админ-ручка возвращает все команды, в которых состоит пользователь.
-
     """
-
-    stmt = (
-        select(TeamORM)
-        .join(TeamORM.memberships)
-        .where(MembershipORM.user_id == user_id)
-    )
-
-    result = await db.scalars(stmt)
-    user_teams = result.all()
+    user_teams = await service.get_user_teams(user_id)
 
     return user_teams

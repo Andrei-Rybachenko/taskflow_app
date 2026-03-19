@@ -29,17 +29,20 @@ class MeetingORM(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
     title: Mapped[str] = mapped_column(String(100))
-    start_time: Mapped[datetime] = mapped_column(DateTime)
-    end_time: Mapped[datetime] = mapped_column(DateTime)
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
-    team: Mapped["TeamORM"] = relationship("TeamORM",
-                                           back_populates="meetings")
+    team: Mapped["TeamORM"] = relationship(
+        "TeamORM",
+        back_populates="meetings",
+        lazy="selectin")
 
     users: Mapped[list["User"]] = relationship(
         "User",
         secondary=meeting_participants,
-        back_populates="meetings"
+        back_populates="meetings",
+        lazy="selectin"
     )
 
     def __str__(self):

@@ -1,9 +1,12 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
+from src.schemas.common_schemas import TeamShort, UserShort
+
 
 class MeetingCreate(BaseModel):
     title: str
+    team_id: int
     start_time: datetime
     end_time: datetime
 
@@ -23,7 +26,7 @@ class MeetingRead(BaseModel):
     end_time: datetime
     creator_id: int
 
-    # team: TeamShort
-    # users: list[UserShort]
+    team: TeamShort
+    users: list[UserShort]
 
     model_config = ConfigDict(from_attributes=True)
