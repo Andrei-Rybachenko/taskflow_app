@@ -21,7 +21,7 @@ from src.services.meetings_service import MeetingsService
 from src.services.memberships_service import MembershipsService
 from src.services.tasks_service import TasksService
 from src.services.teams_service import TeamsService
-
+from src.services.users_service import UsersService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,13 +66,15 @@ def memberships_service(
 
     return MembershipsService(memberships_repo, tasks_repo, teams_repo, users_repo)
 
-#
-# def users_service(
-#     db: "AsyncSession" = Depends(get_async_session)
-# ):
-#     users_repo = UsersRepository(db)
-#
-#     return UsersService(users_repo)
+
+def users_service(
+    db: "AsyncSession" = Depends(get_async_session)
+):
+    users_repo = UsersRepository(db)
+    memberships_repo = MembershipsRepository(db)
+
+
+    return UsersService(users_repo, memberships_repo)
 
 
 def meetings_service(

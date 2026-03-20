@@ -40,7 +40,7 @@ class SQLAlchemyRepository(ABC):
 
 
     async def find_all(self):
-        stmt = select(self.model)
+        stmt = select(self.model).order_by(self.model.id)
         result = await self.session.scalars(stmt)
 
         return result.all()

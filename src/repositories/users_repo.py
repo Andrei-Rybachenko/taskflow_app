@@ -14,3 +14,4 @@ class UsersRepository(SQLAlchemyRepository):
         user = await self.session.scalar(stmt)
 
         return user
+

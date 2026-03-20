@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +14,8 @@ from src.auth.schemas import UserRead, UserCreate, UserUpdate
 from src.database import get_async_session
 from src.schemas import MembershipRead
 from src.schemas.common_schemas import TeamShort
+from src.services.users_service import UsersService
+from src.dependencies import users_service, admin_required
 
 auth_router = fastapi_users.get_auth_router(auth_backend)
 register_router = fastapi_users.get_register_router(UserRead, UserCreate)
@@ -24,42 +28,16 @@ users_router = APIRouter(prefix="/users", tags=["users"])
 @users_router.get("",
                   response_model=list[UserRead],
                   status_code=status.HTTP_200_OK)
-async def get_users(db: AsyncSession = Depends(get_async_session)):
-    """
-
-    Ручка возвращает всех пользователей из базы.
-
-    """
-
-    stmt = select(User).order_by(User.id)
-
-    result = await db.scalars(stmt)
-    return result.all()
-
-
-@users_router.get(
-    "/me/teams", response_model=list[TeamShort], status_code=status.HTTP_200_OK
-)
-async def get_user_teams(
-    current_user: User = Depends(current_active_user),
-    db: AsyncSession = Depends(get_async_session),
+async def get_users(
+    service: Annotated[UsersService, Depends(users_service)],
+    _: User = Depends(admin_required)
 ):
     """
-
-    Ручка возвращает все команды, в которых состоит текущий пользователь.
-
+    Ручка возвращает всех пользователей из базы.
     """
+    users = await service.get_users()
 
-    stmt = (
-        select(TeamORM)
-        .join(TeamORM.memberships)
-        .where(MembershipORM.user_id == current_user.id)
-    )
-
-    result = await db.scalars(stmt)
-    user_teams = result.all()
-
-    return user_teams
+    return users
 
 
 @users_router.get(
@@ -69,32 +47,12 @@ async def get_user_teams(
 )
 async def get_users_team_members(
     team_id: int,
-    current_user: User = Depends(current_active_user),
-    db: AsyncSession = Depends(get_async_session),
+    service: Annotated[UsersService, Depends(users_service)],
+    current_user: User = Depends(current_active_user)
 ):
     """
-
     Ручка возвращает участников команд, в которых состоит пользователь.
-
     """
+    members = await service.get_user_teams_members(current_user.id, team_id)
 
-    stmt = select(MembershipORM).where(
-        MembershipORM.team_id == team_id,
-        MembershipORM.user_id == current_user.id
-    )
-    team = await db.scalar(stmt)
-
-    if not team:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Вы не являетесь участником этой команды.")
-
-    stmt = (
-        select(MembershipORM)
-        .where(MembershipORM.team_id == team_id)
-        .options(joinedload(MembershipORM.user))
-    )
-
-    result = await db.scalars(stmt)
-    team_members = result.all()
-
-    return team_members
+    return members

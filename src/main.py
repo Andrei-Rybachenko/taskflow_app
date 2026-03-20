@@ -17,7 +17,7 @@ from src.auth.router import (
     fastapi_users_router,
     users_router,
 )
-from src.routers.ui_router import ui_router
+
 from src.routers.calendar import calendar_router
 from src.routers.comments import comments_router
 from src.routers.evaluations import evaluations_router
@@ -50,7 +50,7 @@ app.include_router(evaluations_router)
 app.include_router(meetings_router)
 app.include_router(memberships_router)
 app.include_router(calendar_router)
-app.include_router(ui_router)
+
 
 
 
