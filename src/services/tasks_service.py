@@ -86,7 +86,7 @@ class TasksService:
 
 
     async def get_team_tasks(self, team_id: int):
-        team = await self.teams_repo.get_team_by_id(team_id)
+        team = await self.teams_repo.find_one(team_id)
 
         if not team:
             raise HTTPException(

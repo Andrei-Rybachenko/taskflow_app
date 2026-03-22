@@ -9,16 +9,12 @@ class TeamsRepository(SQLAlchemyRepository):
 
 
     async def add_team(self, data: dict, owner_id: int):
+        obj = self.model(**data, owner_id=owner_id)
+        self.session.add(obj)
+        await self.session.commit()
+        await self.session.refresh(obj)
 
-        stmt = insert(self.model).values(
-             **data,
-            owner_id=owner_id
-        ).returning(self.model)
-
-        result = await self.session.execute(stmt)
-        team = result.scalar()
-
-        return team
+        return obj
 
 
     async def get_by_user_id(self, user_id: int):

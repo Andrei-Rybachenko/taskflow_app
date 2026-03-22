@@ -4,7 +4,7 @@ from fastapi_users import models, FastAPIUsers, InvalidPasswordException
 from fastapi_users.authentication import (
     JWTStrategy,
     AuthenticationBackend,
-    BearerTransport,
+    CookieTransport
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.schemas import UserCreate
@@ -49,7 +49,11 @@ async def get_user_manager(
     yield UserManager(user_db)
 
 
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+cookie_transport = CookieTransport(
+    cookie_name="auth",
+    cookie_max_age=3600,
+    cookie_secure=False,
+)
 
 
 def get_jwt_strategy() -> JWTStrategy[models.UP, models.ID]:
@@ -57,8 +61,8 @@ def get_jwt_strategy() -> JWTStrategy[models.UP, models.ID]:
 
 
 auth_backend = AuthenticationBackend(
-    name="jwt",
-    transport=bearer_transport,
+    name="cookie",
+    transport=cookie_transport,
     get_strategy=get_jwt_strategy,
 )
 

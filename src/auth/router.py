@@ -1,21 +1,17 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 from starlette import status
 
 from src.auth.users import auth_backend, fastapi_users
 from src.routers import current_active_user
-from src.models import TeamORM, MembershipORM
 from src.models.users import User
 from src.auth.schemas import UserRead, UserCreate, UserUpdate
-from src.database import get_async_session
 from src.schemas import MembershipRead
-from src.schemas.common_schemas import TeamShort
+
 from src.services.users_service import UsersService
 from src.dependencies import users_service, admin_required
+
 
 auth_router = fastapi_users.get_auth_router(auth_backend)
 register_router = fastapi_users.get_register_router(UserRead, UserCreate)

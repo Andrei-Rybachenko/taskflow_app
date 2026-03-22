@@ -9,16 +9,12 @@ class TasksRepository(SQLAlchemyRepository):
 
 
     async def add_task(self, data: dict, creator_id: int):
+        obj = self.model(**data, creator_id=creator_id)
+        self.session.add(obj)
+        await self.session.commit()
+        await self.session.refresh(obj)
 
-        stmt = insert(self.model).values(
-            **data,
-            creator_id=creator_id
-        ).returning(self.model)
-
-        result = await self.session.execute(stmt)
-        task = result.scalar()
-
-        return task
+        return obj
 
 
     async def get_by_user_id(self, user_id: int):
