@@ -10,7 +10,23 @@ from fastapi.responses import PlainTextResponse
 from src.database import get_async_session
 from src.models import TaskORM, MeetingORM
 
-calendar_router = APIRouter(prefix="/calendar", tags=["calendar"])
+calendar_router = APIRouter(prefix="/calendar", tags=["Календарь"])
+
+_MONTH_NAMES_RU = (
+    "",
+    "Январь",
+    "Февраль",
+    "Март",
+    "Апрель",
+    "Май",
+    "Июнь",
+    "Июль",
+    "Август",
+    "Сентябрь",
+    "Октябрь",
+    "Ноябрь",
+    "Декабрь",
+)
 
 
 @calendar_router.get("/month", response_class=PlainTextResponse)
@@ -42,7 +58,10 @@ async def get_month_calendar(
 
     cal = calendar.monthcalendar(year, month)
 
-    lines = [f"{calendar.month_name[month]} {year}\n", "Mo Tu We Th Fr Sa Su"]
+    lines = [
+        f"{_MONTH_NAMES_RU[month]} {year}\n",
+        "Пн Вт Ср Чт Пт Сб Вс",
+    ]
 
     for week in cal:
         row = []
@@ -85,7 +104,7 @@ async def get_day_calendar(
         )
     ).all()
 
-    lines = [f"{calendar_date}\n", "Tasks:"]
+    lines = [f"{calendar_date}\n", "Задачи:"]
 
     if tasks:
         for t in tasks:
@@ -93,7 +112,7 @@ async def get_day_calendar(
     else:
         lines.append("  —")
 
-    lines.append("\nMeetings:")
+    lines.append("\nВстречи:")
     if meetings:
         for m in meetings:
             lines.append(f"  • {m.title}")

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Команды</h1>
+{% if user and user.is_superuser %}
+<a href="/ui/teams/create">Создать команду</a>
+{% endif %}
+<ul>
+{% for team in teams %}
+    <li><a href="/ui/teams/{{ team.id }}">{{ team.name }}</a></li>
+{% endfor %}
+</ul>
+
+<div class="pager">
+    {% if has_prev %}
+        <a class="btn" href="/ui/teams?page={{ page - 1 }}&size={{ size }}">Назад</a>
+    {% endif %}
+    <span class="muted">Страница {{ page }}</span>
+    {% if has_next %}
+        <a class="btn" href="/ui/teams?page={{ page + 1 }}&size={{ size }}">Вперёд</a>
+    {% endif %}
+</div>
+{% endblock %}

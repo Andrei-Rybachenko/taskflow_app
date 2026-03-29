@@ -1,5 +1,5 @@
 """
-Тесты для роутера /tasks
+Тесты для роутера /api/tasks
 """
 import pytest
 import pytest_asyncio
@@ -19,8 +19,8 @@ class TestGetAllTasks:
         assert response.json() == []
 
     async def test_returns_all_tasks(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         await create_task(db, team_id=1, creator_id=1, title="Task 1")
         await create_task(db, team_id=1, creator_id=1, title="Task 2")
 
@@ -29,20 +29,20 @@ class TestGetAllTasks:
         assert len(response.json()) == 2
 
     async def test_tasks_have_correct_fields(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
-        task = await create_task(db, team_id=1, creator_id=1, title="Важная задача")
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
+        await create_task(db, team_id=1, creator_id=1, title="Важная задача")
 
         response = await client.get("/tasks")
         data = response.json()
         assert data[0]["title"] == "Важная задача"
-        assert data[0]["status"] == TaskStatus.OPEN
+        assert data[0]["status"] == TaskStatus.OPEN.value
 
 
 class TestGetMyTasks:
     async def test_returns_tasks_for_current_user(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         await create_task(db, team_id=1, creator_id=1, title="Моя задача", executor_id=1)
 
         response = await client.get("/tasks/my")
@@ -52,8 +52,8 @@ class TestGetMyTasks:
         assert data[0]["title"] == "Моя задача"
 
     async def test_returns_empty_if_no_tasks_assigned(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         await create_task(db, team_id=1, creator_id=1, title="Чужая задача", executor_id=2)
 
         response = await client.get("/tasks/my")
@@ -63,28 +63,38 @@ class TestGetMyTasks:
 
 class TestCreateTask:
     async def test_creates_task_successfully(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         deadline = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
 
         response = await client.post(
-            "/tasks/1/create",
-            json={"title": "Новая задача", "description": "Описание", "deadline": deadline}
+            "/tasks/create",
+            json={
+                "title": "Новая задача",
+                "description": "Описание",
+                "deadline": deadline,
+                "team_id": 1,
+            },
         )
         assert response.status_code == 201
         data = response.json()
         assert data["title"] == "Новая задача"
         assert data["team_id"] == 1
-        assert data["status"] == TaskStatus.OPEN
+        assert data["status"] == TaskStatus.OPEN.value
 
     async def test_created_task_has_creator_id(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         deadline = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
 
         response = await client.post(
-            "/tasks/1/create",
-            json={"title": "Задача", "description": "Описание", "deadline": deadline}
+            "/tasks/create",
+            json={
+                "title": "Задача",
+                "description": "Описание",
+                "deadline": deadline,
+                "team_id": 1,
+            },
         )
         assert response.status_code == 201
         assert response.json()["creator_id"] == 1
@@ -92,8 +102,8 @@ class TestCreateTask:
 
 class TestGetTaskById:
     async def test_returns_task_by_id(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1, title="Найди меня")
 
         response = await client.get(f"/tasks/{task.id}")
@@ -105,8 +115,8 @@ class TestGetTaskById:
         assert response.status_code == 404
 
     async def test_task_includes_comments_and_executor(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1, executor_id=1)
 
         response = await client.get(f"/tasks/{task.id}")
@@ -117,47 +127,44 @@ class TestGetTaskById:
 
 class TestUpdateTask:
     async def test_updates_task_title(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1, title="Старый заголовок")
 
         response = await client.patch(
             f"/tasks/{task.id}/update",
-            params={"team_id": 1},
-            json={"title": "Новый заголовок"}
+            json={"title": "Новый заголовок"},
         )
         assert response.status_code == 200
         assert response.json()["title"] == "Новый заголовок"
 
     async def test_updates_task_status(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1)
 
         response = await client.patch(
             f"/tasks/{task.id}/update",
-            params={"team_id": 1},
-            json={"status": TaskStatus.IN_PROGRESS}
+            json={"status": TaskStatus.IN_PROGRESS.value},
         )
         assert response.status_code == 200
-        assert response.json()["status"] == TaskStatus.IN_PROGRESS
+        assert response.json()["status"] == TaskStatus.IN_PROGRESS.value
 
     async def test_returns_404_for_missing_task(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
 
         response = await client.patch(
             "/tasks/9999/update",
-            params={"team_id": 1},
-            json={"title": "Не найдётся"}
+            json={"title": "Не найдётся"},
         )
         assert response.status_code == 404
 
 
 class TestDeleteTask:
     async def test_deletes_task_successfully(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1)
 
         response = await client.delete(f"/tasks/{task.id}/delete")
@@ -173,48 +180,48 @@ class TestDeleteTask:
 
 class TestAssignTask:
     async def test_assigns_task_to_user(self, client, db):
-        user = await create_user(db, uid=1)
-        executor = await create_user(db, uid=2, username="executor", email="exec@test.com")
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_user(db, uid=2, username="executor", email="exec@test.com")
+        await create_team(db, owner_id=1, tid=1)
         await create_membership(db, user_id=2, team_id=1, role=Role.EMPLOYEE)
         task = await create_task(db, team_id=1, creator_id=1)
 
         response = await client.patch(
             f"/tasks/{task.id}/assign",
-            params={"user_to_assign": 2}
+            params={"user_to_assign": 2},
         )
         assert response.status_code == 200
         assert response.json()["executor_id"] == 2
 
     async def test_cannot_reassign_already_assigned_task(self, client, db):
-        user = await create_user(db, uid=1)
-        executor = await create_user(db, uid=2, username="executor", email="exec@test.com")
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_user(db, uid=2, username="executor", email="exec@test.com")
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1, executor_id=1)
 
         response = await client.patch(
             f"/tasks/{task.id}/assign",
-            params={"user_to_assign": 2}
+            params={"user_to_assign": 2},
         )
         assert response.status_code == 400
 
     async def test_cannot_assign_user_from_different_team(self, client, db):
-        user = await create_user(db, uid=1)
-        outsider = await create_user(db, uid=2, username="outsider", email="out@test.com")
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_user(db, uid=2, username="outsider", email="out@test.com")
+        await create_team(db, owner_id=1, tid=1)
         task = await create_task(db, team_id=1, creator_id=1)
 
         response = await client.patch(
             f"/tasks/{task.id}/assign",
-            params={"user_to_assign": 2}
+            params={"user_to_assign": 2},
         )
         assert response.status_code == 400
 
 
 class TestGetTasksByTeam:
     async def test_returns_tasks_for_team(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
         await create_task(db, team_id=1, creator_id=1, title="Задача команды")
 
         response = await client.get("/tasks/1/tasks")
@@ -228,8 +235,8 @@ class TestGetTasksByTeam:
         assert response.status_code == 404
 
     async def test_returns_404_when_team_has_no_tasks(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
 
         response = await client.get("/tasks/1/tasks")
         assert response.status_code == 404

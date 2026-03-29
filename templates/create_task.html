@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Создать задачу</h1>
+
+<form method="post" action="/ui/teams/{{ team_id }}/tasks/create">
+    <input name="title" placeholder="Название задачи" required>
+    <input name="description" placeholder="Описание" required>
+    <input type="datetime-local" name="deadline" required>
+
+    <button type="submit">Создать</button>
+</form>
+{% endblock %}

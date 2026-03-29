@@ -31,3 +31,10 @@ class UsersService:
         members = await self.memberships_repo.get_team_members(team_id)
 
         return members
+
+
+    async def deactivate_me(self, user_id: int):
+        user = await self.users_repo.deactivate_user(user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+        return user

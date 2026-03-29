@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Все задачи</h1>
+
+<p class="muted">Черновой шаблон: маршруты могут отличаться от текущего API.</p>
+<a href="/ui/teams">← К командам</a>
+
+<table border="1" cellpadding="5" cellspacing="0" style="margin-top:12px; border-collapse: collapse;">
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Описание</th>
+            <th>Срок</th>
+            <th>Статус</th>
+            <th>Команда</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for task in tasks %}
+        <tr>
+            <td>{{ task.title }}</td>
+            <td>{{ task.description }}</td>
+            <td>{{ task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "" }}</td>
+            <td>{{ task.status.value if task.status else task.status }}</td>
+            <td>{{ task.team.name if task.team else task.team_id }}</td>
+            <td>—</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

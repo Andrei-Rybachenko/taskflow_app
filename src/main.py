@@ -1,6 +1,9 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import HTTPException
 
 from src.admin.models import (
     UserAdmin,
@@ -30,6 +33,7 @@ from src.routers.teams import teams_router
 
 from sqladmin import Admin
 from src.database import async_engine
+from src.routers.web_ui import web_router
 
 app = FastAPI(
     title="TaskFlow",
@@ -37,24 +41,56 @@ app = FastAPI(
     version="1.0.1",
 )
 
-
-app.include_router(auth_router, prefix="/auth/jwt", tags=["auth"])
-app.include_router(register_router, prefix="/auth", tags=["auth"])
-app.include_router(fastapi_users_router, prefix="/auth/users", tags=["users"])
-
-app.include_router(tasks_router)
-app.include_router(users_router)
-app.include_router(teams_router)
-app.include_router(comments_router)
-app.include_router(evaluations_router)
-app.include_router(meetings_router)
-app.include_router(memberships_router)
-app.include_router(calendar_router)
+templates = Jinja2Templates(directory="templates")
 
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # Для API оставляем JSON (по умолчанию), а для UI показываем HTML.
+    if request.url.path.startswith("/ui"):
+        if exc.status_code in (401, 403):
+            return templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "user": None,
+                    "message": "Недостаточно прав. Войдите или обратитесь к администратору.",
+                    "back_url": "/ui/login",
+                },
+                status_code=exc.status_code,
+            )
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "user": None,
+                "message": str(exc.detail),
+                "back_url": "/ui/teams",
+            },
+            status_code=exc.status_code,
+        )
+    # иначе — JSON как обычно для API
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
-admin = Admin(app=app, engine=async_engine, title="TaskFlowAdmin")
+app.include_router(auth_router, prefix="/auth", tags=["Авторизация"])
+app.include_router(register_router, prefix="/auth", tags=["Авторизация"])
+app.include_router(fastapi_users_router, prefix="/auth/users", tags=["Пользователи"])
+
+app.include_router(tasks_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+app.include_router(teams_router, prefix="/api")
+app.include_router(comments_router, prefix="/api")
+app.include_router(evaluations_router, prefix="/api")
+app.include_router(meetings_router, prefix="/api")
+app.include_router(memberships_router, prefix="/api")
+app.include_router(calendar_router, prefix="/api")
+app.include_router(web_router)
+
+
+
+
+admin = Admin(app=app, engine=async_engine, title="Админка TaskFlow")
 
 admin.add_view(UserAdmin)
 admin.add_view(TaskAdmin)
@@ -67,7 +103,7 @@ admin.add_view(EvaluationsAdmin)
 
 @app.get("/")
 async def root():
-    return RedirectResponse("/ui/")
+    return RedirectResponse("/ui/login")
 
 
 if __name__ == "__main__":

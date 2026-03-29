@@ -12,7 +12,7 @@ from src.schemas.teams import TeamRead, TeamCreate
 from src.services.teams_service import TeamsService
 
 
-teams_router = APIRouter(prefix="/teams", tags=["teams"])
+teams_router = APIRouter(prefix="/teams", tags=["Команды"])
 
 
 @teams_router.post(

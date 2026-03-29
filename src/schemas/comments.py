@@ -7,6 +7,12 @@ class CommentCreate(BaseModel):
     content: str
 
 
+class CommentContentBody(BaseModel):
+    """Тело POST без task_id (task_id в path)."""
+
+    content: str
+
+
 class CommentUpdate(BaseModel):
     content: str | None
 

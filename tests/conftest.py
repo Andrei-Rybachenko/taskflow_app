@@ -68,7 +68,7 @@ async def client(engine):
     app.dependency_overrides[manager_required] = lambda: superuser
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(transport=transport, base_url="http://test/api") as ac:
         yield ac
 
     app.dependency_overrides.clear()

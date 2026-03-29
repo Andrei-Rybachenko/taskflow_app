@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ team.name }}</h1>
+
+<p><a href="/ui/teams/{{ team.id }}/tasks/create">+ Создать задачу</a></p>
+<p><a href="/ui/teams/{{ team.id }}/meetings/create">+ Создать встречу</a></p>
+{% if user and user.is_superuser %}
+<form method="post" action="/ui/teams/{{ team.id }}/delete" style="margin: 10px 0;">
+    <button type="submit" class="btn">Удалить команду</button>
+</form>
+{% endif %}
+
+<h2>Задачи</h2>
+{% if error_tasks %}
+<p class="error">{{ error_tasks }}</p>
+{% endif %}
+{% if tasks %}
+<ul>
+{% for task in tasks %}
+    <li>
+        <a href="/ui/teams/{{ team.id }}/tasks/{{ task.id }}">{{ task.title }}</a>
+        — <span class="badge">{{ task.status.value if task.status else "" }}</span>
+        <span class="muted">(срок: {{ task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "" }})</span>
+        <form method="post" action="/ui/teams/{{ team.id }}/tasks/{{ task.id }}/delete" style="display:inline">
+            <button type="submit" class="btn">Удалить</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p>—</p>
+{% endif %}
+
+<div class="pager">
+    {% if has_prev_tasks %}
+        <a class="btn" href="/ui/teams/{{ team.id }}?page_tasks={{ page_tasks - 1 }}&page_meetings={{ page_meetings }}&size={{ size }}">Назад</a>
+    {% endif %}
+    <span class="muted">Задачи, страница {{ page_tasks }}</span>
+    {% if has_next_tasks %}
+        <a class="btn" href="/ui/teams/{{ team.id }}?page_tasks={{ page_tasks + 1 }}&page_meetings={{ page_meetings }}&size={{ size }}">Вперёд</a>
+    {% endif %}
+</div>
+
+<h2>Встречи</h2>
+{% if error_meetings %}
+<p class="error">{{ error_meetings }}</p>
+{% endif %}
+{% if meetings %}
+<ul>
+{% for meeting in meetings %}
+    <li>
+        {{ meeting.title }}:
+        <span class="muted">
+            {{ meeting.start_time.strftime("%Y-%m-%d %H:%M") if meeting.start_time else "" }}
+            —
+            {{ meeting.end_time.strftime("%Y-%m-%d %H:%M") if meeting.end_time else "" }}
+        </span>
+        <form method="post" action="/ui/teams/{{ team.id }}/meetings/{{ meeting.id }}/delete" style="display:inline">
+            <button type="submit" class="btn">Удалить</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p>—</p>
+{% endif %}
+
+<div class="pager">
+    {% if has_prev_meetings %}
+        <a class="btn" href="/ui/teams/{{ team.id }}?page_tasks={{ page_tasks }}&page_meetings={{ page_meetings - 1 }}&size={{ size }}">Назад</a>
+    {% endif %}
+    <span class="muted">Встречи, страница {{ page_meetings }}</span>
+    {% if has_next_meetings %}
+        <a class="btn" href="/ui/teams/{{ team.id }}?page_tasks={{ page_tasks }}&page_meetings={{ page_meetings + 1 }}&size={{ size }}">Вперёд</a>
+    {% endif %}
+</div>
+{% endblock %}

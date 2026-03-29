@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Создать встречу</h1>
+
+<form method="post" action="/ui/teams/{{ team_id }}/meetings/create">
+    <input name="title" placeholder="Название" required>
+    <input type="datetime-local" name="start_time" required>
+    <input type="datetime-local" name="end_time" required>
+    <button type="submit">Создать</button>
+</form>
+
+<p><a href="/ui/teams/{{ team_id }}">← К команде</a></p>
+{% endblock %}

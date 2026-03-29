@@ -44,10 +44,10 @@ class MembershipsService:
                 detail="Пользователь уже состоит в команде.",
             )
 
-        new_membership = new_membership.model_dump()
-        membership = await self.memberships_repo.add_one(new_membership)
+        data = new_membership.model_dump()
+        await self.memberships_repo.add_one(data)
 
-        return membership
+        return await self.memberships_repo.get_membership(data["user_id"], data["team_id"])
 
 
     async def get(self, user_id: int, team_id: int):
@@ -78,9 +78,16 @@ class MembershipsService:
                 detail="Нельзя удалить владельца команды",
             )
 
+        await self.memberships_repo.delete_member(user_id, team_id)
+
     async def get_members(self, team_id: int):
         members = await self.memberships_repo.get_team_members(team_id)
         return members
+
+
+    async def get_user_memberships(self, user_id: int):
+        memberships = await self.memberships_repo.get_user_memberships(user_id)
+        return memberships
 
 
     async def change_role(
@@ -100,5 +107,7 @@ class MembershipsService:
         membership_dict = membership_to_update.model_dump(exclude_unset=True)
         updated_membership = await self.memberships_repo.update(membership_dict, user_id, team_id)
 
-        return updated_membership
+        # Для схемы `MembershipRead` нужны вложенные `user` и `team`,
+        # поэтому перезагружаем membership через get_membership().
+        return await self.memberships_repo.get_membership(user_id, team_id)
 

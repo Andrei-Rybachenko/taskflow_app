@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from src.models import MeetingORM
 from src.repositories.repository import SQLAlchemyRepository
@@ -29,9 +30,37 @@ class MeetingsRepository(SQLAlchemyRepository):
 
         return result
 
-    async def get_meetings_by_team_id(self, team_id: int):
-        stmt = select(self.model).where(self.model.team_id==team_id)
+    async def get_meetings_by_team_id(
+        self,
+        team_id: int,
+        limit: int | None = None,
+        offset: int | None = None,
+    ):
+        stmt = (
+            select(self.model)
+            .where(self.model.team_id == team_id)
+            .order_by(self.model.id)
+            .options(
+                selectinload(self.model.team),
+                selectinload(self.model.users),
+            )
+        )
+        if offset is not None:
+            stmt = stmt.offset(offset)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         meetings = await self.session.scalars(stmt)
 
-        return meetings
+        return meetings.all()
+
+    async def get_meeting_with_relations(self, meeting_id: int):
+        stmt = (
+            select(self.model)
+            .where(self.model.id == meeting_id)
+            .options(
+                selectinload(self.model.team),
+                selectinload(self.model.users),
+            )
+        )
+        return await self.session.scalar(stmt)
 

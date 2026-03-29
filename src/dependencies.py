@@ -22,6 +22,8 @@ from src.services.memberships_service import MembershipsService
 from src.services.tasks_service import TasksService
 from src.services.teams_service import TeamsService
 from src.services.users_service import UsersService
+from src.schemas.tasks import TaskCreate
+from src.services.tasks_service import TasksService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,7 +123,7 @@ async def manager_required(
 async def admin_or_manager_required(
     team_id: int | None,
     service: Annotated[MembershipsService, Depends(memberships_service)],
-    current_user: "User" = Depends(current_active_user)
+    current_user: "User" = Depends(current_active_user),
 ):
     if current_user.is_superuser:
         return current_user
@@ -136,6 +138,27 @@ async def admin_or_manager_required(
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав"
     )
+
+
+async def admin_or_manager_required_from_task_create(
+    task: TaskCreate,
+    service: Annotated[MembershipsService, Depends(memberships_service)],
+    current_user: "User" = Depends(current_active_user),
+):
+    """Для POST /tasks/create — team_id берётся из тела запроса."""
+    return await admin_or_manager_required(task.team_id, service, current_user)
+
+
+async def admin_or_manager_for_existing_task(
+    task_id: int,
+    tasks: Annotated[TasksService, Depends(tasks_service)],
+    service: Annotated[MembershipsService, Depends(memberships_service)],
+    current_user: "User" = Depends(current_active_user),
+):
+    """Проверка прав менеджера/админа команды по team_id существующей задачи."""
+    task = await tasks.get_task_or_404(task_id)
+    tid = task.team_id
+    return await admin_or_manager_required(tid, service, current_user)
 
 
 async def team_member_required(

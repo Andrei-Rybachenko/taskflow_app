@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Создать команду</h1>
+
+<form method="post" action="/ui/teams/create">
+    <input name="name" placeholder="Название команды" required>
+    <button type="submit">Создать</button>
+</form>
+
+<p><a href="/ui/teams">← К списку команд</a></p>
+{% endblock %}

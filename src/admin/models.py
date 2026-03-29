@@ -8,6 +8,9 @@ from src.models.tasks import TaskORM
 
 
 class UserAdmin(ModelView, model=User):
+    name = "Пользователь"
+    name_plural = "Пользователи"
+
     column_list = [
         User.id,
         User.email,
@@ -27,6 +30,9 @@ class UserAdmin(ModelView, model=User):
 
 
 class TaskAdmin(ModelView, model=TaskORM):
+    name = "Задача"
+    name_plural = "Задачи"
+
     column_list = [
         TaskORM.id,
         TaskORM.title,
@@ -37,23 +43,26 @@ class TaskAdmin(ModelView, model=TaskORM):
         TaskORM.status,
     ]
 
-    name_plural = "Tasks"
-
 
 class TeamAdmin(ModelView, model=TeamORM):
+    name = "Команда"
+    name_plural = "Команды"
+
     column_list = [TeamORM.id, TeamORM.name,
                    TeamORM.created_at, TeamORM.owner_id]
 
-    name_plural = "Teams"
-
 
 class MembershipsAdmin(ModelView, model=MembershipORM):
-    column_list = [MembershipORM.team_id, MembershipORM.user_id]
+    name = "Участие в команде"
+    name_plural = "Участия в командах"
 
-    name_plural = "Memberships"
+    column_list = [MembershipORM.team_id, MembershipORM.user_id]
 
 
 class MeetingsAdmin(ModelView, model=MeetingORM):
+    name = "Встреча"
+    name_plural = "Встречи"
+
     column_list = [
         MeetingORM.id,
         MeetingORM.team_id,
@@ -63,10 +72,11 @@ class MeetingsAdmin(ModelView, model=MeetingORM):
         MeetingORM.end_time,
     ]
 
-    name_plural = "Meetings"
-
 
 class CommentsAdmin(ModelView, model=CommentORM):
+    name = "Комментарий"
+    name_plural = "Комментарии"
+
     column_list = [
         CommentORM.id,
         CommentORM.task_id,
@@ -75,10 +85,11 @@ class CommentsAdmin(ModelView, model=CommentORM):
         CommentORM.created_at,
     ]
 
-    name_plural = "Comments"
-
 
 class EvaluationsAdmin(ModelView, model=EvaluationORM):
+    name = "Оценка"
+    name_plural = "Оценки"
+
     column_list = [
         EvaluationORM.id,
         EvaluationORM.task_id,
@@ -88,5 +99,3 @@ class EvaluationsAdmin(ModelView, model=EvaluationORM):
         EvaluationORM.score,
         EvaluationORM.reviewer_id,
     ]
-
-    name_plural = "Evaluation"

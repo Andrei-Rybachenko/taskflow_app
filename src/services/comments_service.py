@@ -16,10 +16,17 @@ class CommentsService:
         self.tasks_repo = tasks_repo
 
 
-    async def create_comment(self, comment: CommentCreate, author_id: int):
+    async def create_comment(
+        self, comment: CommentCreate, author_id: int, team_id: int
+    ):
         task = await self.tasks_repo.get_task_by_id(comment.task_id)
 
         if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
+            )
+
+        if task.team_id != team_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
             )
@@ -30,10 +37,18 @@ class CommentsService:
         return result
 
 
-    async def delete_comment(self, comment_id: int, author_id: int):
+    async def delete_comment(
+        self, comment_id: int, author_id: int, task_id: int
+    ):
         comment_to_delete = await self.comments_repo.find_one(comment_id)
 
         if not comment_to_delete:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Комментарий не найден."
+            )
+
+        if comment_to_delete.task_id != task_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Комментарий не найден."
@@ -48,7 +63,7 @@ class CommentsService:
         await self.comments_repo.delete(comment_id)
 
 
-    async def get_comments(self, task_id):
+    async def get_comments(self, task_id: int, team_id: int):
         task = await self.tasks_repo.get_task_by_id(task_id)
 
         if not task:
@@ -56,13 +71,12 @@ class CommentsService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
             )
 
-        comments = await self.comments_repo.get(task_id)
-
-        if not comments:
+        if task.team_id != team_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="У задачи нет комментариев."
+                status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
             )
 
-        return comments
+        comments = await self.comments_repo.get(task_id)
+
+        return comments or []
 

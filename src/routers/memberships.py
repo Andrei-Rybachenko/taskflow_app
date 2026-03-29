@@ -10,7 +10,7 @@ from src.schemas import MembershipCreate, MembershipRead, MembershipUpdate
 from src.services.memberships_service import MembershipsService
 
 
-memberships_router = APIRouter(prefix="/memberships", tags=["memberships"])
+memberships_router = APIRouter(prefix="/memberships", tags=["Участники"])
 
 
 @memberships_router.post(

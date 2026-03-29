@@ -18,7 +18,7 @@ register_router = fastapi_users.get_register_router(UserRead, UserCreate)
 fastapi_users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
 
 
-users_router = APIRouter(prefix="/users", tags=["users"])
+users_router = APIRouter(prefix="/users", tags=["Пользователи"])
 
 
 @users_router.get("",

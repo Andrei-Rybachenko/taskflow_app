@@ -26,11 +26,12 @@ class MeetingsService:
         new_meeting = meeting.model_dump()
         meeting = await self.meetings_repo.add_meeting(new_meeting, creator_id)
 
-        return meeting
+        # На этапе сериализации `MeetingRead` требуется `team` и `users`,
+        # поэтому возвращаем объект, подгруженный через eager loading.
+        return await self.meetings_repo.get_meeting_with_relations(meeting.id)
 
 
-    async def delete_meeting(self, meeting_id: int):
-
+    async def delete_meeting(self, meeting_id: int, team_id: int | None = None):
         meeting = await self.meetings_repo.find_one(meeting_id)
 
         if not meeting:
@@ -38,23 +39,22 @@ class MeetingsService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Встреча не найдена."
             )
 
+        if team_id is not None and meeting.team_id != team_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Встреча не найдена."
+            )
+
         await self.meetings_repo.delete(meeting_id)
 
 
-    async def get_team_meetings(self, team_id: int):
-        meetings = await self.meetings_repo.get_meetings_by_team_id(team_id)
+    async def get_team_meetings(self, team_id: int, limit: int | None = None, offset: int | None = None):
+        meetings = await self.meetings_repo.get_meetings_by_team_id(team_id, limit=limit, offset=offset)
 
-        if not meetings:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Встречи не найдены"
-            )
-
-        return meetings
+        return meetings or []
 
 
     async def get_meeting(self, meeting_id: int):
-        meeting = await self.meetings_repo.find_one(meeting_id)
+        meeting = await self.meetings_repo.get_meeting_with_relations(meeting_id)
 
         if not meeting:
             raise HTTPException(

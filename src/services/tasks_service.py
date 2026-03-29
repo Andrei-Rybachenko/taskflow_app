@@ -22,8 +22,8 @@ class TasksService:
 
     async def create(self, task: TaskCreate, creator_id: int):
         new_task = task.model_dump()
-        task = await self.tasks_repo.add_task(new_task, creator_id=creator_id)
-        return task
+        created = await self.tasks_repo.add_task(new_task, creator_id=creator_id)
+        return await self.tasks_repo.get_task_by_id_with_relations(created.id)
 
 
     async def delete(self, task_id: int):
@@ -38,8 +38,8 @@ class TasksService:
         return deleted_task
 
 
-    async def get_tasks(self):
-        tasks = await self.tasks_repo.find_all()
+    async def get_tasks(self, limit: int | None = None, offset: int | None = None):
+        tasks = await self.tasks_repo.get_tasks_with_relations(limit=limit, offset=offset)
         return tasks
 
 
@@ -54,9 +54,20 @@ class TasksService:
 
         return task
 
+    async def get_task_with_relations_or_404(self, task_id: int):
+        task = await self.tasks_repo.get_task_by_id_with_relations(task_id)
 
-    async def get_users_tasks(self, current_user: int):
-        tasks = await self.tasks_repo.get_by_user_id(current_user)
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Такой задачи не существует"
+            )
+
+        return task
+
+
+    async def get_users_tasks(self, current_user: int, limit: int | None = None, offset: int | None = None):
+        tasks = await self.tasks_repo.get_by_user_id(current_user, limit=limit, offset=offset)
         return tasks
 
 
@@ -82,10 +93,10 @@ class TasksService:
             task_update.model_dump(exclude_unset=True)
         )
 
-        return updated_task
+        return await self.tasks_repo.get_task_by_id_with_relations(task_id)
 
 
-    async def get_team_tasks(self, team_id: int):
+    async def get_team_tasks(self, team_id: int, limit: int | None = None, offset: int | None = None):
         team = await self.teams_repo.find_one(team_id)
 
         if not team:
@@ -94,7 +105,7 @@ class TasksService:
                 detail="Такой команды не существует"
             )
 
-        tasks = await self.tasks_repo.get_tasks_by_team_id(team_id)
+        tasks = await self.tasks_repo.get_tasks_by_team_id(team_id, limit=limit, offset=offset)
 
         if not tasks:
             raise HTTPException(
@@ -129,6 +140,5 @@ class TasksService:
                        " так как он принадлежит другой команде.",
             )
 
-        task = await self.tasks_repo.assign_to_user(task_id, user_to_assign)
-
-        return task
+        await self.tasks_repo.assign_to_user(task_id, user_to_assign)
+        return await self.tasks_repo.get_task_by_id_with_relations(task_id)

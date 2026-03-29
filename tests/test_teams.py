@@ -1,5 +1,5 @@
 """
-Тесты для роутера /teams
+Тесты для роутера /api/teams
 """
 import pytest
 
@@ -12,14 +12,14 @@ pytestmark = pytest.mark.asyncio
 
 class TestCreateTeam:
     async def test_creates_team_successfully(self, client, db):
-        user = await create_user(db, uid=1)
+        await create_user(db, uid=1)
 
         response = await client.post("/teams/create", json={"name": "Dream Team"})
         assert response.status_code == 201
         assert response.json()["name"] == "Dream Team"
 
     async def test_created_team_has_id(self, client, db):
-        user = await create_user(db, uid=1)
+        await create_user(db, uid=1)
 
         response = await client.post("/teams/create", json={"name": "My Team"})
         assert "id" in response.json()
@@ -32,7 +32,7 @@ class TestGetAllTeams:
         assert response.json() == []
 
     async def test_returns_all_teams(self, client, db):
-        user = await create_user(db, uid=1)
+        await create_user(db, uid=1)
         await create_team(db, owner_id=1, tid=1, name="Team Alpha")
         await create_team(db, owner_id=1, tid=2, name="Team Beta")
 
@@ -41,7 +41,7 @@ class TestGetAllTeams:
         assert len(response.json()) == 2
 
     async def test_teams_ordered_by_id(self, client, db):
-        user = await create_user(db, uid=1)
+        await create_user(db, uid=1)
         await create_team(db, owner_id=1, tid=1, name="First")
         await create_team(db, owner_id=1, tid=2, name="Second")
 
@@ -52,8 +52,8 @@ class TestGetAllTeams:
 
 class TestGetTeamById:
     async def test_returns_team_by_id(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1, name="The A-Team")
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1, name="The A-Team")
 
         response = await client.get("/teams/1", params={"team_id": 1})
         assert response.status_code == 200
@@ -64,8 +64,8 @@ class TestGetTeamById:
         assert response.status_code == 404
 
     async def test_team_includes_members_tasks_meetings(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1)
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1)
 
         response = await client.get("/teams/1", params={"team_id": 1})
         data = response.json()
@@ -76,8 +76,8 @@ class TestGetTeamById:
 
 class TestGetUserTeams:
     async def test_returns_teams_for_user(self, client, db):
-        user = await create_user(db, uid=1)
-        team = await create_team(db, owner_id=1, tid=1, name="Team X")
+        await create_user(db, uid=1)
+        await create_team(db, owner_id=1, tid=1, name="Team X")
         await create_membership(db, user_id=1, team_id=1, role=Role.TEAM_ADMIN)
 
         response = await client.get("/teams/user/1")
@@ -86,7 +86,7 @@ class TestGetUserTeams:
         assert response.json()[0]["name"] == "Team X"
 
     async def test_returns_empty_for_user_without_teams(self, client, db):
-        user = await create_user(db, uid=1)
+        await create_user(db, uid=1)
 
         response = await client.get("/teams/user/1")
         assert response.status_code == 200

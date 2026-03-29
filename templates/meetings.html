@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Встречи</h1>
+<a href="/meetings/create">Создать встречу</a>
+<ul>
+{% for meeting in meetings %}
+    <li>{{ meeting.title }}: {{ meeting.start_time }} — {{ meeting.end_time }}
+        <a href="/meetings/edit/{{ meeting.id }}">Изменить</a>
+        <a href="/meetings/delete/{{ meeting.id }}">Удалить</a>
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}

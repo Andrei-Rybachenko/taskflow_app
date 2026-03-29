@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Мои задачи</h1>
+<ul>
+{% for task in tasks %}
+    <li>
+        {% if task.team_id %}
+        <a href="/ui/teams/{{ task.team_id }}/tasks/{{ task.id }}">{{ task.title }}</a>
+        {% else %}
+        {{ task.title }}
+        {% endif %}
+        — <span class="badge">{{ task.status.value if task.status else "" }}</span>
+        <span class="muted">(срок: {{ task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "" }})</span>
+    </li>
+{% endfor %}
+</ul>
+
+<div class="pager">
+    {% if has_prev %}
+        <a class="btn" href="/ui/tasks?page={{ page - 1 }}&size={{ size }}">Назад</a>
+    {% endif %}
+    <span class="muted">Страница {{ page }}</span>
+    {% if has_next %}
+        <a class="btn" href="/ui/tasks?page={{ page + 1 }}&size={{ size }}">Вперёд</a>
+    {% endif %}
+</div>
+{% endblock %}

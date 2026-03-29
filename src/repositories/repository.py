@@ -39,8 +39,12 @@ class SQLAlchemyRepository(ABC):
         await self.session.commit()
 
 
-    async def find_all(self):
+    async def find_all(self, limit: int | None = None, offset: int | None = None):
         stmt = select(self.model).order_by(self.model.id)
+        if offset is not None:
+            stmt = stmt.offset(offset)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         result = await self.session.scalars(stmt)
 
         return result.all()

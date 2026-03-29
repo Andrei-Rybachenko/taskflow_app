@@ -10,10 +10,14 @@ class MembershipsRepository(SQLAlchemyRepository):
 
 
     async def get_membership(self, user_id: int, team_id: int):
-        stmt = (select(self.model)
-                      .where(self.model.user_id==user_id,
-                             self.model.team_id==team_id)
-                .options(joinedload(self.model.user)))
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.user_id == user_id,
+                self.model.team_id == team_id,
+            )
+            .options(joinedload(self.model.user), joinedload(self.model.team))
+        )
 
         membership = await self.session.scalar(stmt)
 
@@ -36,12 +40,29 @@ class MembershipsRepository(SQLAlchemyRepository):
         stmt = (
             select(self.model)
             .where(self.model.team_id == team_id)
-            .options(joinedload(self.model.user))
+            .options(
+                joinedload(self.model.user),
+                joinedload(self.model.team),
+            )
         )
 
         members = await self.session.scalars(stmt)
 
         return members.all()
+
+
+    async def get_user_memberships(self, user_id: int):
+        stmt = (
+            select(self.model)
+            .where(self.model.user_id == user_id)
+            .options(
+                joinedload(self.model.user),
+                joinedload(self.model.team),
+            )
+            .order_by(self.model.team_id)
+        )
+        result = await self.session.scalars(stmt)
+        return result.all()
 
 
     async def update(

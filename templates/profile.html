@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Профиль</h1>
+
+<p><b>ID:</b> {{ user.id }}</p>
+<p><b>Электронная почта:</b> {{ user.email }}</p>
+<p><b>Имя пользователя:</b> {{ user.username }}</p>
+<p><b>Активен:</b> {{ "да" if user.is_active else "нет" }}</p>
+<p><b>Администратор:</b> {{ "да" if user.is_superuser else "нет" }}</p>
+
+<h2>Роли в командах</h2>
+{% if memberships %}
+<ul>
+{% for m in memberships %}
+    <li>
+        <a href="/ui/teams/{{ m.team_id }}">{{ m.team.name }}</a>
+        — <span class="badge">{{ m.role.value if m.role else "" }}</span>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p class="muted">—</p>
+{% endif %}
+
+<h2>Опасная зона</h2>
+<form method="post" action="/ui/profile/delete">
+    <button type="submit" class="btn">Удалить мой аккаунт</button>
+</form>
+
+{% endblock %}

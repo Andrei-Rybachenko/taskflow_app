@@ -3,13 +3,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from starlette import status
 from src.routers import current_active_user
-from src.dependencies import admin_or_manager_required, tasks_service
+from src.dependencies import (
+    admin_or_manager_required,
+    admin_or_manager_for_existing_task,
+    admin_or_manager_required_from_task_create,
+    tasks_service,
+)
 from src.models import User
 from src.schemas.common_schemas import TaskShort
 from src.schemas.tasks import TaskCreate, TaskRead, TaskUpdate
 from src.services.tasks_service import TasksService
 
-tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
+tasks_router = APIRouter(prefix="/tasks", tags=["Задачи"])
 
 
 @tasks_router.get(
@@ -43,7 +48,7 @@ async def get_my_tasks(
 async def create_task(
     task: TaskCreate,
     service: Annotated[TasksService, Depends(tasks_service)],
-    current_user: User = Depends(admin_or_manager_required),
+    current_user: User = Depends(admin_or_manager_required_from_task_create),
 ):
     """
 
@@ -64,7 +69,7 @@ async def update_task(
     task_id: int,
     task_update: TaskUpdate,
     service: Annotated[TasksService, Depends(tasks_service)],
-    _: User = Depends(admin_or_manager_required)
+    _: User = Depends(admin_or_manager_for_existing_task),
 ):
     """
     Ручка для изменения задачи.
@@ -103,12 +108,12 @@ async def get_tasks_by_team_id(
 async def get_task_by_id(
     task_id: int,
     service: Annotated[TasksService, Depends(tasks_service)],
-    _: User = Depends(admin_or_manager_required)
+    _: User = Depends(admin_or_manager_for_existing_task),
 ):
     """
     Ручка возвращает задачу по id.
     """
-    task = await service.get_task_or_404(task_id)
+    task = await service.get_task_with_relations_or_404(task_id)
 
     return task
 
@@ -119,7 +124,7 @@ async def get_task_by_id(
 async def delete_task_by_id(
     task_id: int,
     service: Annotated[TasksService, Depends(tasks_service)],
-    _: User = Depends(admin_or_manager_required)
+    _: User = Depends(admin_or_manager_for_existing_task),
 ):
     """
     Ручка удаляет задачу по id.
@@ -137,7 +142,7 @@ async def assign_task_to_user(
     task_id: int,
     user_to_assign: int,
     service: Annotated[TasksService, Depends(tasks_service)],
-    _: User = Depends(admin_or_manager_required)
+    _: User = Depends(admin_or_manager_for_existing_task),
 ):
 
     task = await service.assign(task_id, user_to_assign)

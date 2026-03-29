@@ -1,0 +1,121 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>TaskFlow</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --card: #111a33;
+            --text: #e8ecff;
+            --muted: #aeb7e6;
+            --border: rgba(255, 255, 255, 0.12);
+            --accent: #6aa3ff;
+            --danger: #ff6a6a;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .container { max-width: 960px; margin: 0 auto; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+        }
+        nav .left, nav .right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        nav .brand { font-weight: 700; letter-spacing: 0.2px; color: var(--text); }
+
+        hr { border: none; border-top: 1px solid var(--border); margin: 14px 0 18px; }
+
+        input, select, textarea {
+            width: 100%;
+            max-width: 520px;
+            display: block;
+            margin: 8px 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.25);
+            color: var(--text);
+            outline: none;
+        }
+        input:focus, textarea:focus, select:focus { border-color: rgba(106,163,255,0.55); }
+
+        button, .btn {
+            display: inline-block;
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(106, 163, 255, 0.15);
+            color: var(--text);
+            cursor: pointer;
+        }
+        button:hover, .btn:hover { background: rgba(106, 163, 255, 0.22); text-decoration: none; }
+
+        h1 { margin: 0 0 12px; font-size: 24px; }
+        h2 { margin: 18px 0 10px; font-size: 18px; color: var(--text); }
+
+        ul { padding-left: 18px; }
+        li { margin: 7px 0; line-height: 1.35; }
+
+        .muted { color: var(--muted); }
+        .error { color: var(--danger); }
+        .pager { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.06);
+            font-size: 12px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="card">
+        <div class="left">
+            <a class="brand" href="/ui/">TaskFlow</a>
+            {% if user %}
+                <a href="/ui/teams">Команды</a>
+                <a href="/ui/tasks">Мои задачи</a>
+                <a href="/ui/profile">Профиль</a>
+            {% endif %}
+        </div>
+        <div class="right">
+            {% if user %}
+                <span class="muted">{{ user.email }}</span>
+                <a class="btn" href="/ui/logout">Выйти</a>
+            {% else %}
+                <a class="btn" href="/ui/register">Регистрация</a>
+                <a class="btn" href="/ui/login">Вход</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% block content %}{% endblock %}
+</div>
+</body>
+</html>

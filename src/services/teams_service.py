@@ -14,12 +14,12 @@ class TeamsService:
         team = await self.teams_repo.add_team(new_team, owner_id)
         return team
 
-    async def get_teams(self):
-        teams = await self.teams_repo.find_all()
+    async def get_teams(self, limit: int | None = None, offset: int | None = None):
+        teams = await self.teams_repo.find_all(limit=limit, offset=offset)
         return teams
 
     async def get_team(self, team_id: int):
-        team = await self.teams_repo.find_one(team_id)
+        team = await self.teams_repo.get_team_with_relations(team_id)
 
         if not team:
             raise HTTPException(
@@ -29,9 +29,18 @@ class TeamsService:
 
         return team
 
-    async def get_user_teams(self, user_id: int):
-        teams = await self.teams_repo.get_by_user_id(user_id)
+    async def get_user_teams(self, user_id: int, limit: int | None = None, offset: int | None = None):
+        teams = await self.teams_repo.get_by_user_id(user_id, limit=limit, offset=offset)
         return teams
+
+    async def delete_team(self, team_id: int):
+        team = await self.teams_repo.find_one(team_id)
+        if not team:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Такой команды не существует",
+            )
+        await self.teams_repo.delete_team_cascade(team_id)
 
 
 

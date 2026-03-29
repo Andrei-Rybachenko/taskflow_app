@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <p><a href="/ui/teams/{{ team_id }}">← К команде</a></p>
+
+    <h1>{{ task.title or ('Задача №' ~ task.id) }}</h1>
+
+    <p class="muted">ID: {{ task.id }} · Статус: <span class="badge">{{ task.status.value if task.status else '' }}</span></p>
+    <p><b>Описание:</b> {{ task.description }}</p>
+    <p><b>Срок:</b> {{ task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "—" }}</p>
+    <p><b>Создатель (ID):</b> {{ task.creator_id }} · <b>Исполнитель (ID):</b> {{ task.executor_id or "—" }}</p>
+
+    {% if has_evaluation and task.evaluation %}
+    <h2>Оценка</h2>
+    <p><b>Балл:</b> {{ task.evaluation.score }}/5</p>
+    {% if task.evaluation.comment %}
+    <p class="muted">{{ task.evaluation.comment }}</p>
+    {% endif %}
+    {% elif is_manager and task.executor_id %}
+    <h2>Добавить оценку</h2>
+    <form method="post" action="/ui/teams/{{ team_id }}/tasks/{{ task.id }}/evaluate">
+        <label>Оценка (1–5)</label>
+        <select name="score" required>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </select>
+        <label>Комментарий (необязательно)</label>
+        <textarea name="comment" rows="2"></textarea>
+        <button type="submit">Сохранить оценку</button>
+    </form>
+    {% endif %}
+
+    <h2>Комментарии</h2>
+    {% if comments %}
+    <ul>
+        {% for c in comments %}
+        <li><span class="muted">#{{ c.author_id }}</span> {{ c.content }} <small class="muted">{{ c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "" }}</small></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Пока нет комментариев.</p>
+    {% endif %}
+
+    <h3>Добавить комментарий</h3>
+    <form method="post" action="/ui/teams/{{ team_id }}/tasks/{{ task.id }}/comment">
+        <textarea name="content" rows="3" required placeholder="Текст комментария…"></textarea>
+        <button type="submit">Отправить</button>
+    </form>
+</div>
+{% endblock %}
