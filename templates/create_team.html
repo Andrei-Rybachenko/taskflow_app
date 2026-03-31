@@ -3,8 +3,35 @@
 <h1>Создать команду</h1>
 
 <form method="post" action="/ui/teams/create">
-    <input name="name" placeholder="Название команды" required>
-    <button type="submit">Создать</button>
+    <label for="name">Название команды</label>
+    <input id="name" name="name" placeholder="Название команды" required>
+
+    <h2>Добавить участников</h2>
+    {% if users %}
+    <p class="muted">Выберите участников и укажите их роль. Вы автоматически добавляетесь как администратор команды.</p>
+    <div style="max-width: 520px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+        {% for u in users %}
+        {% if u.id != user.id %}
+        <div class="card" style="padding: 10px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <input type="checkbox" id="member_{{ u.id }}" name="member_ids" value="{{ u.id }}"
+                   style="width: auto; margin: 0; cursor: pointer;">
+            <label for="member_{{ u.id }}" style="flex: 1; cursor: pointer; margin: 0;">
+                <strong>{{ u.username }}</strong>
+                <span class="muted" style="font-size: 13px;"> {{ u.email }}</span>
+            </label>
+            <select name="member_role_{{ u.id }}" style="width: auto; margin: 0; padding: 6px 10px;">
+                <option value="employee">Сотрудник</option>
+                <option value="manager">Менеджер</option>
+            </select>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Нет других пользователей для добавления.</p>
+    {% endif %}
+
+    <button type="submit">Создать команду</button>
 </form>
 
 <p><a href="/ui/teams">← К списку команд</a></p>

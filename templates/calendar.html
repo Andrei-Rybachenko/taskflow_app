@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom: 18px;">
+    <h1>📅 Календарь</h1>
+
+    <!-- Переключатель вида -->
+    <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center;">
+        <a class="btn {% if view == 'month' %}btn-active{% endif %}"
+           href="/ui/calendar?view=month">Месяц</a>
+        <a class="btn {% if view == 'day' %}btn-active{% endif %}"
+           href="/ui/calendar?view=day&date={{ today }}">День</a>
+    </div>
+
+    <style>
+        .btn-active {
+            background: rgba(106, 163, 255, 0.35);
+            border-color: rgba(106, 163, 255, 0.6);
+        }
+
+        /* ── Месячная навигация ── */
+        .cal-nav {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .cal-nav h2 { margin: 0; font-size: 20px; }
+
+        /* ── Сетка месяца ── */
+        .cal-grid {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+        .cal-grid th {
+            padding: 8px 4px;
+            text-align: center;
+            color: var(--muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+        .cal-grid td {
+            width: 14.28%;
+            vertical-align: top;
+            padding: 6px 4px;
+            border: 1px solid var(--border);
+            min-height: 70px;
+            position: relative;
+        }
+        .cal-grid td.empty { background: rgba(0,0,0,0.15); }
+        .cal-grid td.today { background: rgba(106, 163, 255, 0.10); }
+        .cal-day-num {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .cal-grid td.today .cal-day-num { color: var(--accent); }
+        .cal-event {
+            display: block;
+            font-size: 11px;
+            padding: 2px 5px;
+            border-radius: 5px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .cal-event.task { background: rgba(106, 163, 255, 0.18); color: var(--accent); }
+        .cal-event.meeting { background: rgba(100, 220, 140, 0.18); color: #6fdc8c; }
+
+        /* ── Дневной вид ── */
+        .day-nav {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .day-nav h2 { margin: 0; font-size: 20px; }
+        .day-section { margin-bottom: 18px; }
+        .day-section h3 {
+            font-size: 15px;
+            color: var(--muted);
+            margin: 0 0 8px;
+            font-weight: 600;
+        }
+        .day-item {
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            border: 1px solid var(--border);
+        }
+        .day-item.task { background: rgba(106, 163, 255, 0.08); }
+        .day-item.meeting { background: rgba(100, 220, 140, 0.08); }
+        .day-item .time { font-size: 12px; color: var(--muted); min-width: 80px; }
+        .day-item .title { font-weight: 500; }
+        .day-empty { color: var(--muted); font-style: italic; padding: 8px 0; }
+
+        .date-input-row {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px;
+        }
+    </style>
+
+    {% if view == 'month' %}
+        <!-- ══════════ МЕСЯЧНЫЙ ВИД ══════════ -->
+        <div class="cal-nav">
+            <a class="btn" href="/ui/calendar?view=month&year={{ prev_year }}&month={{ prev_month }}">‹ Назад</a>
+            <h2>{{ month_name }} {{ year }}</h2>
+            <a class="btn" href="/ui/calendar?view=month&year={{ next_year }}&month={{ next_month }}">Вперёд ›</a>
+        </div>
+
+        <table class="cal-grid">
+            <thead>
+                <tr>
+                    <th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th>
+                    <th style="color:#ff9a9a;">Сб</th><th style="color:#ff9a9a;">Вс</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in weeks %}
+                <tr>
+                    {% for day in week %}
+                    {% if day == 0 %}
+                        <td class="empty"></td>
+                    {% else %}
+                        <td class="{% if day == today_day and year == today_year and month == today_month %}today{% endif %}">
+                            <a class="cal-day-num" href="/ui/calendar?view=day&date={{ year }}-{{ '%02d'|format(month) }}-{{ '%02d'|format(day) }}"
+                               style="text-decoration:none;">{{ day }}</a>
+                            {% for task in tasks_by_day.get(day, []) %}
+                                <span class="cal-event task" title="{{ task.title }}">📋 {{ task.title }}</span>
+                            {% endfor %}
+                            {% for meeting in meetings_by_day.get(day, []) %}
+                                <span class="cal-event meeting" title="{{ meeting.title }}">🤝 {{ meeting.title }}</span>
+                            {% endfor %}
+                        </td>
+                    {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    {% else %}
+        <!-- ══════════ ДНЕВНОЙ ВИД ══════════ -->
+        <div class="day-nav">
+            <a class="btn" href="/ui/calendar?view=day&date={{ prev_date }}">‹ Назад</a>
+            <h2>{{ date_display }}</h2>
+            <a class="btn" href="/ui/calendar?view=day&date={{ next_date }}">Вперёд ›</a>
+        </div>
+
+        <div class="date-input-row">
+            <span class="muted" style="font-size:13px;">Перейти к дате:</span>
+            <input type="date" id="day-picker" value="{{ current_date }}"
+                   style="width:auto; max-width:180px; margin:0; padding:7px 10px;"
+                   onchange="window.location='/ui/calendar?view=day&date='+this.value">
+        </div>
+
+        <hr>
+
+        <div class="day-section">
+            <h3>📋 Задачи (срок)</h3>
+            {% if day_tasks %}
+                {% for t in day_tasks %}
+                <div class="day-item task">
+                    <span class="time">{{ t.deadline.strftime('%H:%M') }}</span>
+                    <span class="title">{{ t.title }}</span>
+                    <span class="muted" style="font-size:12px; margin-left: auto;">{{ t.status.value }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="day-empty">Нет задач на этот день</div>
+            {% endif %}
+        </div>
+
+        <div class="day-section">
+            <h3>🤝 Встречи</h3>
+            {% if day_meetings %}
+                {% for m in day_meetings %}
+                <div class="day-item meeting">
+                    <span class="time">{{ m.start_time.strftime('%H:%M') }}–{{ m.end_time.strftime('%H:%M') }}</span>
+                    <span class="title">{{ m.title }}</span>
+                    <span class="muted" style="font-size:12px; margin-left: auto;">{{ m.team.name }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="day-empty">Нет встреч на этот день</div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

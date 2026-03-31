@@ -1,13 +1,18 @@
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timedelta
+import calendar as calendar_module
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status as http_status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 
 from src.auth.schemas import UserCreate
 from src.auth.users import auth_backend, get_user_manager
+from src.database import get_async_session
 from src.dependencies import (
     admin_or_manager_required,
     admin_required,
@@ -21,9 +26,10 @@ from src.dependencies import (
     comments_service,
     evaluations_service,
 )
+from sqlalchemy import select, extract, func as sa_func
 from src.models import User
 from src.routers import current_active_user, current_optional_user
-from src.schemas import MeetingCreate, TaskCreate, CommentCreate, EvaluationCreate
+from src.schemas import MeetingCreate, TaskCreate, CommentCreate, EvaluationCreate, MembershipCreate
 from src.schemas.teams import TeamCreate
 from src.services.meetings_service import MeetingsService
 from src.services.tasks_service import TasksService
@@ -192,14 +198,31 @@ async def list_teams(
 async def create_team(
     request: Request,
     service: TeamsService = Depends(teams_service),
+    m_service: MembershipsService = Depends(memberships_service),
     user: User = Depends(admin_required),
 ):
     form = await request.form()
     name = form.get("name")
 
     team_data = TeamCreate(name=name)
+    new_team = await service.create(team_data, owner_id=user.id)
 
-    await service.create(team_data, owner_id=user.id)
+    member_ids = form.getlist("member_ids")
+    for uid_str in member_ids:
+        try:
+            uid = int(uid_str)
+            role_str = form.get(f"member_role_{uid}") or "employee"
+            try:
+                role = Role(role_str)
+            except ValueError:
+                role = Role.EMPLOYEE
+            await m_service.add_member(MembershipCreate(
+                user_id=uid,
+                team_id=new_team.id,
+                role=role,
+            ))
+        except Exception:
+            pass
 
     return RedirectResponse("/ui/teams", status_code=303)
 
@@ -207,9 +230,15 @@ async def create_team(
 @web_router.get("/teams/create")
 async def create_team_page(
     request: Request,
+    u_service: UsersService = Depends(users_service),
     user: User = Depends(admin_required),
 ):
-    return templates.TemplateResponse("create_team.html", {"request": request, "user": user})
+    all_users = await u_service.get_users()
+    return templates.TemplateResponse("create_team.html", {
+        "request": request,
+        "user": user,
+        "users": all_users,
+    })
 
 
 @web_router.get("/teams/{team_id}")
@@ -219,6 +248,8 @@ async def team_detail(
     team_service: TeamsService = Depends(teams_service),
     task_service: TasksService = Depends(tasks_service),
     meeting_service: MeetingsService = Depends(meetings_service),
+    m_service: MembershipsService = Depends(memberships_service),
+    u_service: UsersService = Depends(users_service),
     user: User = Depends(team_member_required),
     page_tasks: int = 1,
     page_meetings: int = 1,
@@ -250,6 +281,11 @@ async def team_detail(
     if isinstance(meetings, list):
         meetings = meetings[:size]
 
+    members = await m_service.get_members(team_id)
+    member_user_ids = {m.user_id for m in members}
+    all_users = await u_service.get_users()
+    available_users = [u for u in all_users if u.id not in member_user_ids] if user.is_superuser else []
+
     return templates.TemplateResponse("team_detail.html", {
         "request": request,
         "user": user,
@@ -265,7 +301,47 @@ async def team_detail(
         "has_next_tasks": has_next_tasks,
         "has_prev_meetings": page_meetings > 1,
         "has_next_meetings": has_next_meetings,
+        "members": members,
+        "available_users": available_users,
     })
+
+
+@web_router.post("/teams/{team_id}/members/add", response_class=RedirectResponse)
+async def add_team_member(
+    team_id: int,
+    request: Request,
+    m_service: MembershipsService = Depends(memberships_service),
+    _: User = Depends(admin_required),
+):
+    form = await request.form()
+    user_id_str = form.get("user_id")
+    role_str = form.get("role") or "employee"
+    if user_id_str:
+        try:
+            uid = int(user_id_str)
+            try:
+                role = Role(role_str)
+            except ValueError:
+                role = Role.EMPLOYEE
+            await m_service.add_member(MembershipCreate(
+                user_id=uid,
+                team_id=team_id,
+                role=role,
+            ))
+        except Exception:
+            pass
+    return RedirectResponse(f"/ui/teams/{team_id}", status_code=303)
+
+
+@web_router.post("/teams/{team_id}/members/{member_user_id}/delete", response_class=RedirectResponse)
+async def remove_team_member(
+    team_id: int,
+    member_user_id: int,
+    m_service: MembershipsService = Depends(memberships_service),
+    _: User = Depends(admin_required),
+):
+    await m_service.delete(member_user_id, team_id)
+    return RedirectResponse(f"/ui/teams/{team_id}", status_code=303)
 
 
 @web_router.get("/teams/{team_id}/tasks/create")
@@ -500,3 +576,114 @@ async def create_meeting(
         creator_id=user.id,
     )
     return RedirectResponse(f"/ui/teams/{team_id}", status_code=303)
+
+# Календарь
+
+_MONTH_NAMES_RU = (
+    "", "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+)
+
+
+@web_router.get("/calendar", response_class=HTMLResponse)
+async def calendar_page(
+    request: Request,
+    user: User = Depends(current_active_user),
+    view: str = "month",
+    year: str = None,
+    month: str = None,
+    date: str = None,
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        year = int(year) if year else None
+    except (ValueError, TypeError):
+        year = None
+    try:
+        month = int(month) if month else None
+    except (ValueError, TypeError):
+        month = None
+    from src.models import TaskORM, MeetingORM
+
+    today = datetime.today().date()
+
+    if view == "day":
+        try:
+            current_date = datetime.strptime(date, "%Y-%m-%d").date() if date else today
+        except (ValueError, TypeError):
+            current_date = today
+
+        prev_date = current_date - timedelta(days=1)
+        next_date = current_date + timedelta(days=1)
+
+        tasks_q = await db.scalars(
+            select(TaskORM).where(sa_func.date(TaskORM.deadline) == current_date)
+        )
+        day_tasks = tasks_q.all()
+
+        meetings_q = await db.scalars(
+            select(MeetingORM).where(sa_func.date(MeetingORM.start_time) == current_date)
+        )
+        day_meetings = meetings_q.all()
+
+        return templates.TemplateResponse("calendar.html", {
+            "request": request,
+            "user": user,
+            "view": "day",
+            "today": str(today),
+            "current_date": str(current_date),
+            "date_display": current_date.strftime("%d.%m.%Y"),
+            "prev_date": str(prev_date),
+            "next_date": str(next_date),
+            "day_tasks": sorted(day_tasks, key=lambda t: t.deadline),
+            "day_meetings": sorted(day_meetings, key=lambda m: m.start_time),
+        })
+
+    else:
+        y = year or today.year
+        m = month or today.month
+
+        prev_month_date = (datetime(y, m, 1) - timedelta(days=1)).replace(day=1)
+        next_month_date = (datetime(y, m, 28) + timedelta(days=4)).replace(day=1)
+
+        tasks_q = await db.scalars(
+            select(TaskORM).where(
+                extract("year", TaskORM.deadline) == y,
+                extract("month", TaskORM.deadline) == m,
+            )
+        )
+        tasks_by_day = defaultdict(list)
+        for t in tasks_q.all():
+            tasks_by_day[t.deadline.day].append(t)
+
+        meetings_q = await db.scalars(
+            select(MeetingORM).where(
+                extract("year", MeetingORM.start_time) == y,
+                extract("month", MeetingORM.start_time) == m,
+            )
+        )
+        meetings_by_day = defaultdict(list)
+        for mt in meetings_q.all():
+            meetings_by_day[mt.start_time.day].append(mt)
+
+        weeks = calendar_module.monthcalendar(y, m)
+
+        return templates.TemplateResponse("calendar.html", {
+            "request": request,
+            "user": user,
+            "view": "month",
+            "today": str(today),
+            "today_day": today.day,
+            "today_month": today.month,
+            "today_year": today.year,
+            "year": y,
+            "month": m,
+            "month_name": _MONTH_NAMES_RU[m],
+            "prev_year": prev_month_date.year,
+            "prev_month": prev_month_date.month,
+            "next_year": next_month_date.year,
+            "next_month": next_month_date.month,
+            "weeks": weeks,
+            "tasks_by_day": dict(tasks_by_day),
+            "meetings_by_day": dict(meetings_by_day),
+        })

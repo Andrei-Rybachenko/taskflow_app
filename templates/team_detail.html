@@ -10,6 +10,54 @@
 </form>
 {% endif %}
 
+<h2>Участники</h2>
+{% if members %}
+<ul>
+{% for m in members %}
+    <li style="margin: 8px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span>
+            <strong>{{ m.user.username }}</strong>
+            <span class="muted">({{ m.user.email }})</span>
+            — <span class="badge">{{ m.role.value }}</span>
+        </span>
+        {% if user and user.is_superuser and m.role.value != "team_admin" %}
+        <form method="post" action="/ui/teams/{{ team.id }}/members/{{ m.user_id }}/delete" style="display:inline; margin: 0;">
+            <button type="submit" class="btn" style="padding: 4px 10px; font-size: 12px;">Удалить</button>
+        </form>
+        {% endif %}
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p class="muted">—</p>
+{% endif %}
+
+{% if user and user.is_superuser and available_users %}
+<details style="margin-top: 10px; max-width: 520px;">
+    <summary class="btn" style="cursor: pointer; display: inline-block;">+ Добавить участника</summary>
+    <div class="card" style="margin-top: 10px; padding: 14px;">
+        <form method="post" action="/ui/teams/{{ team.id }}/members/add" style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+                <label>Пользователь</label>
+                <select name="user_id" required style="margin-top: 4px;">
+                    {% for u in available_users %}
+                    <option value="{{ u.id }}">{{ u.username }} ({{ u.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Роль</label>
+                <select name="role" style="margin-top: 4px;">
+                    <option value="employee">Сотрудник</option>
+                    <option value="manager">Менеджер</option>
+                </select>
+            </div>
+            <button type="submit" style="align-self: flex-start;">Добавить</button>
+        </form>
+    </div>
+</details>
+{% endif %}
+
 <h2>Задачи</h2>
 {% if error_tasks %}
 <p class="error">{{ error_tasks }}</p>
