@@ -69,7 +69,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             },
             status_code=exc.status_code,
         )
-    # иначе — JSON как обычно для API
+
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 

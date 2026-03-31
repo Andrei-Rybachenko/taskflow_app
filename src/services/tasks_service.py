@@ -72,14 +72,6 @@ class TasksService:
 
 
     async def update(self, task_update: TaskUpdate, task_id: int):
-        # team = await self.teams_repo.get_by_team_id(team)
-        #
-        # if not team:
-        #     raise HTTPException(
-        #         status_code=status.HTTP_404_NOT_FOUND,
-        #         detail="Команда не существует."
-        #     )
-
         task = await self.tasks_repo.find_one(task_id)
 
         if not task:

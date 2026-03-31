@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:15
+    container_name: taskflow_app_postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+    ports:
+      - ${DB_PORT}:5432
+    volumes:
+      - .postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  migrate:
+    build: .
+    container_name: taskflow_app_migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: alembic upgrade head
+
+  app:
+    build: .
+    container_name: taskflow_app
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    restart: always
