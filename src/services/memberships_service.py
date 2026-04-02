@@ -45,7 +45,11 @@ class MembershipsService:
             )
 
         data = new_membership.model_dump()
-        await self.memberships_repo.add_one(data)
+        try:
+            await self.memberships_repo.add_one(data)
+        except Exception:
+            await self.memberships_repo.session.rollback()
+            raise
 
         return await self.memberships_repo.get_membership(data["user_id"], data["team_id"])
 
@@ -78,17 +82,19 @@ class MembershipsService:
                 detail="Нельзя удалить владельца команды",
             )
 
-        await self.memberships_repo.delete_member(user_id, team_id)
+        try:
+            await self.memberships_repo.delete_member(user_id, team_id)
+        except Exception:
+            await self.memberships_repo.session.rollback()
+            raise
 
     async def get_members(self, team_id: int):
         members = await self.memberships_repo.get_team_members(team_id)
         return members
 
-
     async def get_user_memberships(self, user_id: int):
         memberships = await self.memberships_repo.get_user_memberships(user_id)
         return memberships
-
 
     async def change_role(
             self,
@@ -105,9 +111,12 @@ class MembershipsService:
             )
 
         membership_dict = membership_to_update.model_dump(exclude_unset=True)
-        updated_membership = await self.memberships_repo.update(membership_dict, user_id, team_id)
+        try:
+            updated_membership = await self.memberships_repo.update(membership_dict, user_id, team_id)
+        except Exception:
+            await self.memberships_repo.session.rollback()
+            raise
 
-        # Для схемы `MembershipRead` нужны вложенные `user` и `team`,
-        # поэтому перезагружаем membership через get_membership().
-        return await self.memberships_repo.get_membership(user_id, team_id)
+        return await self.memberships_repo.get_membership(updated_membership.user_id,
+                                                          updated_membership.team_id)
 
