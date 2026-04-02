@@ -21,20 +21,19 @@ class CommentsService:
     ):
         task = await self.tasks_repo.get_task_by_id(comment.task_id)
 
-        if not task:
+        if not task or task.team_id != team_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
             )
 
-        if task.team_id != team_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
-            )
 
-        new_comment = comment.model_dump()
-        result = await self.comments_repo.add(new_comment, author_id)
-
-        return result
+        try:
+            new_comment = comment.model_dump()
+            result = await self.comments_repo.add(new_comment, author_id)
+            return result
+        except Exception as e:
+            await self.comments_repo.session.rollback()
+            raise
 
 
     async def delete_comment(
@@ -42,13 +41,7 @@ class CommentsService:
     ):
         comment_to_delete = await self.comments_repo.find_one(comment_id)
 
-        if not comment_to_delete:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Комментарий не найден."
-            )
-
-        if comment_to_delete.task_id != task_id:
+        if not comment_to_delete or comment_to_delete.task_id != task_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Комментарий не найден."
@@ -60,18 +53,17 @@ class CommentsService:
                 detail="Нет прав на удаление комментария.",
             )
 
-        await self.comments_repo.delete(comment_id)
+        try:
+            await self.comments_repo.delete(comment_id)
+        except Exception as e:
+            await self.comments_repo.session.rollback()
+            raise
 
 
     async def get_comments(self, task_id: int, team_id: int):
         task = await self.tasks_repo.get_task_by_id(task_id)
 
-        if not task:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
-            )
-
-        if task.team_id != team_id:
+        if not task or task.team_id != team_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
             )
