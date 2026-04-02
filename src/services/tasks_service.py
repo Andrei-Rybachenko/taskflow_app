@@ -22,12 +22,21 @@ class TasksService:
 
     async def create(self, task: TaskCreate, creator_id: int):
         new_task = task.model_dump()
-        created = await self.tasks_repo.add_task(new_task, creator_id=creator_id)
-        return await self.tasks_repo.get_task_by_id_with_relations(created.id)
+
+        try:
+            created = await self.tasks_repo.add_task(new_task, creator_id=creator_id)
+            return await self.tasks_repo.get_task_by_id_with_relations(created.id)
+        except Exception as e:
+            await self.tasks_repo.session.rollback()
+            raise
 
 
     async def delete(self, task_id: int):
-        deleted_task = await self.tasks_repo.delete_task_by_id(task_id)
+        try:
+            deleted_task = await self.tasks_repo.delete_task_by_id(task_id)
+        except Exception as e:
+            await self.tasks_repo.session.rollback()
+            raise
 
         if not deleted_task:
             raise HTTPException(
@@ -80,12 +89,16 @@ class TasksService:
                 detail="Задача не существует."
             )
 
-        updated_task = await self.tasks_repo.update_task_by_id(
-            task,
-            task_update.model_dump(exclude_unset=True)
-        )
+        try:
+            updated_task = await self.tasks_repo.update_task_by_id(
+                task,
+                task_update.model_dump(exclude_unset=True)
+            )
 
-        return await self.tasks_repo.get_task_by_id_with_relations(task_id)
+            return await self.tasks_repo.get_task_by_id_with_relations(updated_task.id)
+        except Exception as e:
+            await self.tasks_repo.session.rollback()
+            raise
 
 
     async def get_team_tasks(self, team_id: int, limit: int | None = None, offset: int | None = None):
@@ -132,5 +145,9 @@ class TasksService:
                        " так как он принадлежит другой команде.",
             )
 
-        await self.tasks_repo.assign_to_user(task_id, user_to_assign)
-        return await self.tasks_repo.get_task_by_id_with_relations(task_id)
+        try:
+            await self.tasks_repo.assign_to_user(task_id, user_to_assign)
+            return await self.tasks_repo.get_task_by_id_with_relations(task_id)
+        except Exception as e:
+            await self.tasks_repo.session.rollback()
+            raise

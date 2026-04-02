@@ -100,7 +100,7 @@ class TasksRepository(SQLAlchemyRepository):
 
         return task
 
-    async def get_task_by_id_with_relations(self, task_id: int) -> TaskORM | None:
+    async def get_task_by_id_with_relations(self, task_id: int):
         stmt = (
             select(self.model)
             .where(self.model.id == task_id)
