@@ -11,8 +11,13 @@ class TeamsService:
 
     async def create(self, team: TeamCreate, owner_id: int):
         new_team = team.model_dump()
-        team = await self.teams_repo.add_team(new_team, owner_id)
-        return team
+
+        try:
+            team = await self.teams_repo.add_team(new_team, owner_id)
+            return team
+        except Exception:
+            await self.teams_repo.session.rollback()
+            raise
 
     async def get_teams(self, limit: int | None = None, offset: int | None = None):
         teams = await self.teams_repo.find_all(limit=limit, offset=offset)
@@ -40,7 +45,11 @@ class TeamsService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Такой команды не существует",
             )
-        await self.teams_repo.delete_team_cascade(team_id)
+        try:
+            await self.teams_repo.delete_team_cascade(team_id)
+        except Exception:
+            await self.teams_repo.session.rollback()
+            raise
 
 
 
@@ -51,10 +60,3 @@ class TeamsService:
 
 
 
-
-    # async def get_users_tasks(self, current_user: int):
-    #     tasks = await self.tasks_repo.get_by_user_id(current_user)
-    #     return tasks
-    #
-    # async def update(self, task: TaskCreate, team: int, creator_id: int):
-    #     task = pass

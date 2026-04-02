@@ -26,7 +26,7 @@ class TasksService:
         try:
             created = await self.tasks_repo.add_task(new_task, creator_id=creator_id)
             return await self.tasks_repo.get_task_by_id_with_relations(created.id)
-        except Exception as e:
+        except Exception:
             await self.tasks_repo.session.rollback()
             raise
 
@@ -34,7 +34,7 @@ class TasksService:
     async def delete(self, task_id: int):
         try:
             deleted_task = await self.tasks_repo.delete_task_by_id(task_id)
-        except Exception as e:
+        except Exception:
             await self.tasks_repo.session.rollback()
             raise
 
@@ -96,7 +96,7 @@ class TasksService:
             )
 
             return await self.tasks_repo.get_task_by_id_with_relations(updated_task.id)
-        except Exception as e:
+        except Exception:
             await self.tasks_repo.session.rollback()
             raise
 
@@ -148,6 +148,6 @@ class TasksService:
         try:
             await self.tasks_repo.assign_to_user(task_id, user_to_assign)
             return await self.tasks_repo.get_task_by_id_with_relations(task_id)
-        except Exception as e:
+        except Exception:
             await self.tasks_repo.session.rollback()
             raise
