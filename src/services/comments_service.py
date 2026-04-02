@@ -26,7 +26,6 @@ class CommentsService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена"
             )
 
-
         try:
             new_comment = comment.model_dump()
             result = await self.comments_repo.add(new_comment, author_id)

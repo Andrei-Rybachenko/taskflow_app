@@ -25,13 +25,7 @@ class EvaluationsService:
     ):
         task = await self.tasks_repo.find_one(task_id)
 
-        if not task:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Задача не найдена"
-            )
-
-        if task.team_id != team_id:
+        if not task or task.team_id != team_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Задача не найдена"
@@ -57,8 +51,11 @@ class EvaluationsService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Исполнитель в запросе должен совпадать с исполнителем задачи.",
             )
-
-        task_score = await self.evaluations_repo.add(score_data, task_id, reviewer_id)
+        try:
+            task_score = await self.evaluations_repo.add(score_data, task_id, reviewer_id)
+        except Exception:
+            await self.evaluations_repo.session.rollback()
+            raise
 
         return task_score
 

@@ -33,15 +33,13 @@ from src.routers.teams import teams_router
 
 from sqladmin import Admin
 from src.database import async_engine
-from src.routers.web_ui import web_router
+from src.routers.web_ui import web_router, templates
 
 app = FastAPI(
     title="TaskFlow",
     description="Система управления бизнесом для трекинга команд и их задач",
     version="1.0.1",
 )
-
-templates = Jinja2Templates(directory="templates")
 
 
 @app.exception_handler(HTTPException)
