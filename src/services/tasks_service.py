@@ -1,41 +1,42 @@
 from fastapi import HTTPException
 from starlette import status
 
-from src.repositories.membership_repo import MembershipsRepository
-from src.repositories.tasks_repo import TasksRepository
-from src.repositories.teams_repo import TeamsRepository
+from src.repositories.membership_repo import MembershipsRepository, MembershipReader
+from src.repositories.tasks_repo import TasksRepository, TaskReader, TaskWriter
+from src.repositories.teams_repo import TeamsRepository, TeamReader
 from src.schemas import TaskCreate, TaskUpdate
 
 
 class TasksService:
     def __init__(
             self,
-            tasks_repo: TasksRepository,
-            teams_repo: TeamsRepository,
-            memberships_repo: MembershipsRepository
+            task_reader: TaskReader,
+            task_writer: TaskWriter,
+            team_reader: TeamReader,
+            membership_reader: MembershipReader
+
 
     ):
-        self.tasks_repo = tasks_repo
-        self.teams_repo = teams_repo
-        self.memberships_repo = memberships_repo
+        self.task_writer = task_writer
+        self.task_reader = task_reader
+        self.team_reader = team_reader
+        self.membership_reader = membership_reader
 
 
     async def create(self, task: TaskCreate, creator_id: int):
         new_task = task.model_dump()
 
         try:
-            created = await self.tasks_repo.add_task(new_task, creator_id=creator_id)
-            return await self.tasks_repo.get_task_by_id_with_relations(created.id)
+            created = await self.task_writer.add_task(new_task, creator_id=creator_id)
+            return await self.task_reader.get_task_by_id_with_relations(created.id)
         except Exception:
-            await self.tasks_repo.session.rollback()
             raise
 
 
     async def delete(self, task_id: int):
         try:
-            deleted_task = await self.tasks_repo.delete_task_by_id(task_id)
+            deleted_task = await self.task_writer.delete_task_by_id(task_id)
         except Exception:
-            await self.tasks_repo.session.rollback()
             raise
 
         if not deleted_task:
@@ -48,12 +49,12 @@ class TasksService:
 
 
     async def get_tasks(self, limit: int | None = None, offset: int | None = None):
-        tasks = await self.tasks_repo.get_tasks_with_relations(limit=limit, offset=offset)
+        tasks = await self.task_reader.get_tasks_with_relations(limit=limit, offset=offset)
         return tasks
 
 
     async def get_task_or_404(self, task_id: int):
-        task = await self.tasks_repo.get_task_by_id(task_id)
+        task = await self.task_reader.get_task_by_id(task_id)
 
         if not task:
             raise HTTPException(
@@ -64,7 +65,7 @@ class TasksService:
         return task
 
     async def get_task_with_relations_or_404(self, task_id: int):
-        task = await self.tasks_repo.get_task_by_id_with_relations(task_id)
+        task = await self.task_reader.get_task_by_id_with_relations(task_id)
 
         if not task:
             raise HTTPException(
@@ -76,12 +77,12 @@ class TasksService:
 
 
     async def get_users_tasks(self, current_user: int, limit: int | None = None, offset: int | None = None):
-        tasks = await self.tasks_repo.get_by_user_id(current_user, limit=limit, offset=offset)
+        tasks = await self.task_reader.get_by_user_id(current_user, limit=limit, offset=offset)
         return tasks
 
 
     async def update(self, task_update: TaskUpdate, task_id: int):
-        task = await self.tasks_repo.find_one(task_id)
+        task = await self.task_reader.get_task_by_id(task_id)
 
         if not task:
             raise HTTPException(
@@ -90,19 +91,18 @@ class TasksService:
             )
 
         try:
-            updated_task = await self.tasks_repo.update_task_by_id(
+            updated_task = await self.task_writer.update_task_by_id(
                 task,
                 task_update.model_dump(exclude_unset=True)
             )
 
-            return await self.tasks_repo.get_task_by_id_with_relations(updated_task.id)
+            return await self.task_reader.get_task_by_id_with_relations(updated_task.id)
         except Exception:
-            await self.tasks_repo.session.rollback()
             raise
 
 
     async def get_team_tasks(self, team_id: int, limit: int | None = None, offset: int | None = None):
-        team = await self.teams_repo.find_one(team_id)
+        team = await self.team_reader.get_team_with_relations(team_id)
 
         if not team:
             raise HTTPException(
@@ -110,7 +110,7 @@ class TasksService:
                 detail="Такой команды не существует"
             )
 
-        tasks = await self.tasks_repo.get_tasks_by_team_id(team_id, limit=limit, offset=offset)
+        tasks = await self.task_reader.get_tasks_by_team_id(team_id, limit=limit, offset=offset)
 
         if not tasks:
             raise HTTPException(
@@ -121,7 +121,7 @@ class TasksService:
         return tasks
 
     async def assign(self, task_id, user_to_assign):
-        task = await self.tasks_repo.get_task_by_id(task_id)
+        task = await self.task_reader.get_task_by_id(task_id)
 
         if not task:
             raise HTTPException(
@@ -135,7 +135,7 @@ class TasksService:
                 detail="Задача уже назначена другому исполнителю.",
             )
 
-        membership = await self.memberships_repo.get_membership(user_to_assign,
+        membership = await self.membership_reader.get_membership(user_to_assign,
                                                                 task.team_id)
 
         if not membership:
@@ -146,8 +146,7 @@ class TasksService:
             )
 
         try:
-            await self.tasks_repo.assign_to_user(task_id, user_to_assign)
-            return await self.tasks_repo.get_task_by_id_with_relations(task_id)
+            await self.task_writer.assign_to_user(task_id, user_to_assign)
+            return await self.task_reader.get_task_by_id_with_relations(task_id)
         except Exception:
-            await self.tasks_repo.session.rollback()
             raise

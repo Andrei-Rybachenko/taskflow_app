@@ -21,4 +21,9 @@ class Base(DeclarativeBase):
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except:
+            await session.rollback()
+            raise

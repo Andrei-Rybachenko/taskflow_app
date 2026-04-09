@@ -13,12 +13,12 @@ class MembershipsService:
     def __init__(
             self,
             memberships_repo: MembershipsRepository,
-            tasks_repo: TasksRepository,
+            # tasks_repo: TasksRepository,
             teams_repo: TeamsRepository,
             users_repo: UsersRepository
     ):
         self.memberships_repo = memberships_repo
-        self.tasks_repo = tasks_repo
+        # self.tasks_repo = tasks_repo
         self.teams_repo = teams_repo
         self.users_repo = users_repo
 

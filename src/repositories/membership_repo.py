@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
@@ -5,7 +7,22 @@ from src.models import MembershipORM
 from src.repositories.repository import SQLAlchemyRepository
 
 
-class MembershipsRepository(SQLAlchemyRepository):
+class MembershipReader(ABC):
+    @abstractmethod
+    async def get_membership(self, user_id: int, team_id: int):
+        pass
+
+    @abstractmethod
+    async def get_team_members(self, team_id: int):
+        pass
+
+    @abstractmethod
+    async def get_user_memberships(self, user_id: int):
+        pass
+
+
+
+class MembershipsRepository(SQLAlchemyRepository, MembershipReader):
     model = MembershipORM
 
 

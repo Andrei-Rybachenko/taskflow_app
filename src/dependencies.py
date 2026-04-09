@@ -47,7 +47,12 @@ def tasks_service(
     teams_repo = TeamsRepository(db)
     memberships_repo = MembershipsRepository(db)
 
-    return TasksService(tasks_repo, teams_repo, memberships_repo)
+    return TasksService(
+        task_reader=tasks_repo,
+        task_writer=tasks_repo,
+        team_reader=teams_repo,
+        membership_reader=memberships_repo
+    )
 
 
 def teams_service(
@@ -62,11 +67,11 @@ def memberships_service(
     db: "AsyncSession" = Depends(get_async_session)
 ):
     memberships_repo = MembershipsRepository(db)
-    tasks_repo = TasksRepository(db)
+    # tasks_repo = TasksRepository(db)
     teams_repo = TeamsRepository(db)
     users_repo = UsersRepository(db)
 
-    return MembershipsService(memberships_repo, tasks_repo, teams_repo, users_repo)
+    return MembershipsService(memberships_repo, teams_repo, users_repo)
 
 
 def users_service(
