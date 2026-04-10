@@ -1,20 +1,18 @@
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, HTTPException
-from sqlalchemy import select
 from starlette import status
 
 from src.repositories.comments_repository import CommentsRepository
 from src.repositories.evaluations_repo import EvaluationsRepository
 from src.repositories.meetings_repo import MeetingsRepository
-from src.repositories.membership_repo import MembershipsRepository
-from src.repositories.tasks_repo import TasksRepository
-from src.repositories.teams_repo import TeamsRepository
+from src.repositories.membership_repo import MembershipsRepository, MembershipReader
+from src.repositories.tasks_repo import TasksRepository, TaskReader, TaskWriter
+from src.repositories.teams_repo import TeamsRepository, TeamReader, TeamWriter
 from src.repositories.users_repo import UsersRepository
 from src.routers import current_active_user
 from src.database import get_async_session
 from src.enums import Role
-from src.models import MembershipORM
 from src.services.comments_service import CommentsService
 from src.services.evaluations_service import EvaluationsService
 from src.services.meetings_service import MeetingsService
@@ -40,27 +38,47 @@ async def admin_required(user: "User" = Depends(current_active_user)):
 
 
 
-def tasks_service(
+def get_tasks_repo(
     db: "AsyncSession" = Depends(get_async_session)
-):
-    tasks_repo = TasksRepository(db)
-    teams_repo = TeamsRepository(db)
-    memberships_repo = MembershipsRepository(db)
+) -> TasksRepository:
+    return TasksRepository(db)
 
+
+def get_teams_repo(
+    db: "AsyncSession" = Depends(get_async_session)
+) -> TeamsRepository:
+    return TeamsRepository(db)
+
+
+def get_memberships_repo(
+    db: "AsyncSession" = Depends(get_async_session)
+) -> MembershipsRepository:
+    return MembershipsRepository(db)
+
+
+def tasks_service(
+    task_reader: TaskReader = Depends(get_tasks_repo),
+    task_writer: TaskWriter = Depends(get_tasks_repo),
+    team_reader: TeamReader = Depends(get_teams_repo),
+    membership_reader: MembershipReader = Depends(get_memberships_repo)
+):
     return TasksService(
-        task_reader=tasks_repo,
-        task_writer=tasks_repo,
-        team_reader=teams_repo,
-        membership_reader=memberships_repo
+        task_reader=task_reader,
+        task_writer=task_writer,
+        team_reader=team_reader,
+        membership_reader=membership_reader
     )
 
 
 def teams_service(
-    db: "AsyncSession" = Depends(get_async_session)
+    team_reader: TeamReader = Depends(get_teams_repo),
+    team_writer: TeamWriter = Depends(get_teams_repo)
 ):
-    teams_repo = TeamsRepository(db)
 
-    return TeamsService(teams_repo)
+    return TeamsService(
+        team_reader=team_reader,
+        team_writer=team_writer
+    )
 
 
 def memberships_service(

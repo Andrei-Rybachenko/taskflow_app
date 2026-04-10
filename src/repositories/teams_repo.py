@@ -23,6 +23,20 @@ class TeamReader(ABC):
     async def get_team_with_relations(self, team_id: int):
         pass
 
+    @abstractmethod
+    async def find_all(self, limit: int | None = None, offset: int | None = None):
+        pass
+
+
+class TeamWriter(ABC):
+    @abstractmethod
+    async def add_team(self, data: dict, owner_id: int):
+        pass
+
+    @abstractmethod
+    async def delete_team_cascade(self, team_id: int) -> None:
+        pass
+
 
 class TeamsRepository(SQLAlchemyRepository, TeamReader):
     model = TeamORM
@@ -31,8 +45,7 @@ class TeamsRepository(SQLAlchemyRepository, TeamReader):
     async def add_team(self, data: dict, owner_id: int):
         obj = self.model(**data, owner_id=owner_id)
         self.session.add(obj)
-        await self.session.commit()
-        await self.session.refresh(obj)
+        await self.session.flush()
 
         return obj
 
@@ -93,5 +106,4 @@ class TeamsRepository(SQLAlchemyRepository, TeamReader):
             delete(MembershipORM).where(MembershipORM.team_id == team_id)
         )
         await self.session.execute(delete(TeamORM).where(TeamORM.id == team_id))
-        await self.session.commit()
 
