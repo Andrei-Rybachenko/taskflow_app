@@ -1,10 +1,22 @@
+from abc import ABC, abstractmethod
+
 from sqlalchemy import select
 
 from src.models.evaluations import EvaluationORM
 from src.repositories.repository import SQLAlchemyRepository
 
 
-class EvaluationsRepository(SQLAlchemyRepository):
+class EvaluationReader(ABC):
+    @abstractmethod
+    async def get_evaluation_by_task_id(self, task_id: int): pass
+
+
+class EvaluationWriter(ABC):
+    @abstractmethod
+    async def add(self, data: dict, task_id: int, reviewer_id: int): pass
+
+
+class EvaluationsRepository(SQLAlchemyRepository, EvaluationReader, EvaluationWriter):
     model = EvaluationORM
 
     async def get_evaluation_by_task_id(self, task_id: int):

@@ -21,8 +21,23 @@ class MembershipReader(ABC):
         pass
 
 
+class MembershipWriter(ABC):
+    @abstractmethod
+    async def delete_member(self, user_id: int, team_id: int): pass
 
-class MembershipsRepository(SQLAlchemyRepository, MembershipReader):
+    @abstractmethod
+    async def update(
+            self,
+            data: dict,
+            user_id: int,
+            team_id: int
+    ): pass
+
+    @abstractmethod
+    async def add_one(self, data: dict): pass
+
+
+class MembershipsRepository(SQLAlchemyRepository, MembershipReader, MembershipWriter):
     model = MembershipORM
 
 

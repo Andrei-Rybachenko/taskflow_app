@@ -1,10 +1,26 @@
-from sqlalchemy import insert, select
+from abc import ABC, abstractmethod
+from sqlalchemy import select
 
 from src.models import User
 from src.repositories.repository import SQLAlchemyRepository
 
 
-class UsersRepository(SQLAlchemyRepository):
+class UserReader(ABC):
+    @abstractmethod
+    async def get_user(self, user_id: int): pass
+
+    @abstractmethod
+    async def find_all(self, limit: int | None = None, offset: int | None = None): pass
+
+
+class UserWriter(ABC):
+    @abstractmethod
+    async def deactivate_user(self, user_id: int): pass
+
+
+
+
+class UsersRepository(SQLAlchemyRepository, UserWriter, UserReader):
     model = User
 
     async def get_user(self, user_id: int):

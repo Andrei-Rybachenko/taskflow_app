@@ -1,20 +1,23 @@
 from fastapi import HTTPException
 from starlette import status
 
-from src.repositories.evaluations_repo import EvaluationsRepository
+from src.repositories.evaluations_repo import EvaluationsRepository, EvaluationReader, EvaluationWriter
 
-from src.repositories.tasks_repo import TasksRepository
+from src.repositories.tasks_repo import TasksRepository, TaskReader
 from src.schemas import EvaluationCreate
 
 
 class EvaluationsService:
     def __init__(
             self,
-            evaluations_repo: EvaluationsRepository,
-            tasks_repo: TasksRepository
+            evaluation_reader: EvaluationReader,
+            evaluation_writer: EvaluationWriter,
+            task_reader: TaskReader
     ):
-        self.evaluations_repo = evaluations_repo
-        self.tasks_repo = tasks_repo
+        self.evaluation_reader = evaluation_reader
+        self.evaluation_writer = evaluation_writer
+        self.task_reader = task_reader
+
 
     async def create(
             self,
@@ -23,7 +26,7 @@ class EvaluationsService:
             reviewer_id: int,
             team_id: int,
     ):
-        task = await self.tasks_repo.find_one(task_id)
+        task = await self.task_reader.get_task_by_id(task_id)
 
         if not task or task.team_id != team_id:
             raise HTTPException(
@@ -37,7 +40,7 @@ class EvaluationsService:
                 detail="Задача еще не назначена исполнителю",
             )
 
-        existing = await self.evaluations_repo.get_evaluation_by_task_id(task_id)
+        existing = await self.evaluation_reader.get_evaluation_by_task_id(task_id)
 
         if existing:
             raise HTTPException(
@@ -52,16 +55,15 @@ class EvaluationsService:
                 detail="Исполнитель в запросе должен совпадать с исполнителем задачи.",
             )
         try:
-            task_score = await self.evaluations_repo.add(score_data, task_id, reviewer_id)
+            task_score = await self.evaluation_writer.add(score_data, task_id, reviewer_id)
         except Exception:
-            await self.evaluations_repo.session.rollback()
             raise
 
         return task_score
 
 
     async def get_evaluation(self, task_id):
-        task = await self.tasks_repo.get_task_by_id(task_id)
+        task = await self.task_reader.get_task_by_id(task_id)
 
         if not task:
             raise HTTPException(
@@ -75,6 +77,6 @@ class EvaluationsService:
                 detail="Оценка для задачи еще не выставлена.",
             )
 
-        score = await self.evaluations_repo.get_evaluation_by_task_id(task_id)
+        score = await self.evaluation_reader.get_evaluation_by_task_id(task_id)
 
         return score

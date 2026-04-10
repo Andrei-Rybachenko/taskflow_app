@@ -2,32 +2,32 @@ from fastapi import HTTPException
 from starlette import status
 
 from src.enums import Role
-from src.repositories.membership_repo import MembershipsRepository
-from src.repositories.tasks_repo import TasksRepository
-from src.repositories.teams_repo import TeamsRepository
-from src.repositories.users_repo import UsersRepository
+from src.repositories.membership_repo import MembershipReader, MembershipWriter
+
+from src.repositories.teams_repo import TeamReader
+from src.repositories.users_repo import UserReader
 from src.schemas import MembershipCreate, MembershipUpdate
 
 
 class MembershipsService:
     def __init__(
             self,
-            memberships_repo: MembershipsRepository,
-            # tasks_repo: TasksRepository,
-            teams_repo: TeamsRepository,
-            users_repo: UsersRepository
+            membership_reader: MembershipReader,
+            membership_writer: MembershipWriter,
+            team_reader: TeamReader,
+            user_reader: UserReader
     ):
-        self.memberships_repo = memberships_repo
-        # self.tasks_repo = tasks_repo
-        self.teams_repo = teams_repo
-        self.users_repo = users_repo
+        self.membership_reader = membership_reader
+        self.membership_writer = membership_writer
+        self.team_reader = team_reader
+        self.user_reader = user_reader
 
 
     async def add_member(
             self,
             new_membership: MembershipCreate
     ):
-        user = await self.users_repo.get_user(new_membership.user_id)
+        user = await self.user_reader.get_user(new_membership.user_id)
 
         if not user:
             raise HTTPException(
@@ -35,7 +35,7 @@ class MembershipsService:
                 detail="Пользователь не найден"
             )
 
-        existing = await self.memberships_repo.get_membership(new_membership.user_id,
+        existing = await self.membership_reader.get_membership(new_membership.user_id,
                                                               new_membership.team_id)
 
         if existing:
@@ -46,21 +46,20 @@ class MembershipsService:
 
         data = new_membership.model_dump()
         try:
-            await self.memberships_repo.add_one(data)
+            await self.membership_writer.add_one(data)
         except Exception:
-            await self.memberships_repo.session.rollback()
             raise
 
-        return await self.memberships_repo.get_membership(data["user_id"], data["team_id"])
+        return await self.membership_reader.get_membership(data["user_id"], data["team_id"])
 
 
     async def get(self, user_id: int, team_id: int):
-        membership = await self.memberships_repo.get_membership(user_id, team_id)
+        membership = await self.membership_reader.get_membership(user_id, team_id)
         return membership
 
 
     async def delete(self, user_id: int, team_id: int):
-        team = await self.teams_repo.find_one(team_id)
+        team = await self.team_reader.get_team_with_relations(team_id)
 
         if not team:
             raise HTTPException(
@@ -68,7 +67,7 @@ class MembershipsService:
                 detail="Команды не существует."
             )
 
-        membership = await self.memberships_repo.get_membership(user_id, team_id)
+        membership = await self.membership_reader.get_membership(user_id, team_id)
 
         if not membership:
             raise HTTPException(
@@ -83,17 +82,16 @@ class MembershipsService:
             )
 
         try:
-            await self.memberships_repo.delete_member(user_id, team_id)
+            await self.membership_writer.delete_member(user_id, team_id)
         except Exception:
-            await self.memberships_repo.session.rollback()
             raise
 
     async def get_members(self, team_id: int):
-        members = await self.memberships_repo.get_team_members(team_id)
+        members = await self.membership_reader.get_team_members(team_id)
         return members
 
     async def get_user_memberships(self, user_id: int):
-        memberships = await self.memberships_repo.get_user_memberships(user_id)
+        memberships = await self.membership_reader.get_user_memberships(user_id)
         return memberships
 
     async def change_role(
@@ -102,7 +100,7 @@ class MembershipsService:
             user_id: int,
             team_id: int
     ):
-        membership = await self.memberships_repo.get_membership(user_id, team_id)
+        membership = await self.membership_reader.get_membership(user_id, team_id)
 
         if not membership:
             raise HTTPException(
@@ -112,11 +110,10 @@ class MembershipsService:
 
         membership_dict = membership_to_update.model_dump(exclude_unset=True)
         try:
-            updated_membership = await self.memberships_repo.update(membership_dict, user_id, team_id)
+            updated_membership = await self.membership_writer.update(membership_dict, user_id, team_id)
         except Exception:
-            await self.memberships_repo.session.rollback()
             raise
 
-        return await self.memberships_repo.get_membership(updated_membership.user_id,
+        return await self.membership_reader.get_membership(updated_membership.user_id,
                                                           updated_membership.team_id)
 

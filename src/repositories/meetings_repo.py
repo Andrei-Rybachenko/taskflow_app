@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -6,7 +8,31 @@ from src.repositories.repository import SQLAlchemyRepository
 from src.schemas import MeetingCreate
 
 
-class MeetingsRepository(SQLAlchemyRepository):
+class MeetingReader(ABC):
+    @abstractmethod
+    async def overlapping_meeting(self, new_meeting: MeetingCreate): pass
+
+    @abstractmethod
+    async def get_meetings_by_team_id(
+            self,
+            team_id: int,
+            limit: int | None = None,
+            offset: int | None = None,
+    ): pass
+
+    @abstractmethod
+    async def get_meeting_with_relations(self, meeting_id: int): pass
+
+
+class MeetingWriter(ABC):
+    @abstractmethod
+    async def add_meeting(self, data: dict, creator_id: int): pass
+
+    @abstractmethod
+    async def delete(self, instance_id: int): pass
+
+
+class MeetingsRepository(SQLAlchemyRepository, MeetingReader, MeetingWriter):
     model = MeetingORM
 
 

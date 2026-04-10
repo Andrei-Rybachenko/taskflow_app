@@ -1,19 +1,22 @@
 from fastapi import HTTPException
 from starlette import status
 
-from src.repositories.meetings_repo import MeetingsRepository
+from src.repositories.meetings_repo import MeetingReader, MeetingWriter
 from src.schemas import MeetingCreate
 
 
 class MeetingsService:
     def __init__(
             self,
-            meetings_repo: MeetingsRepository
+            meeting_reader: MeetingReader,
+            meeting_writer: MeetingWriter
     ):
-        self.meetings_repo = meetings_repo
+        self.meeting_reader = meeting_reader
+        self.meeting_writer = meeting_writer
+
 
     async def create(self, meeting: MeetingCreate, creator_id: int):
-        overlapping_meeting = await self.meetings_repo.overlapping_meeting(meeting)
+        overlapping_meeting = await self.meeting_reader.overlapping_meeting(meeting)
 
         if overlapping_meeting:
             raise HTTPException(
@@ -25,16 +28,15 @@ class MeetingsService:
 
         new_meeting = meeting.model_dump()
         try:
-            meeting = await self.meetings_repo.add_meeting(new_meeting, creator_id)
+            meeting = await self.meeting_writer.add_meeting(new_meeting, creator_id)
         except Exception:
-            await self.meetings_repo.session.rollback()
             raise
 
-        return await self.meetings_repo.get_meeting_with_relations(meeting.id)
+        return await self.meeting_reader.get_meeting_with_relations(meeting.id)
 
 
     async def delete_meeting(self, meeting_id: int, team_id: int | None = None):
-        meeting = await self.meetings_repo.find_one(meeting_id)
+        meeting = await self.meeting_reader.get_meeting_with_relations(meeting_id)
 
         if not meeting or team_id is not None and meeting.team_id != team_id:
             raise HTTPException(
@@ -42,20 +44,19 @@ class MeetingsService:
             )
 
         try:
-            await self.meetings_repo.delete(meeting_id)
+            await self.meeting_writer.delete(meeting_id)
         except Exception:
-            await self.meetings_repo.session.rollback()
             raise
 
 
     async def get_team_meetings(self, team_id: int, limit: int | None = None, offset: int | None = None):
-        meetings = await self.meetings_repo.get_meetings_by_team_id(team_id, limit=limit, offset=offset)
+        meetings = await self.meeting_reader.get_meetings_by_team_id(team_id, limit=limit, offset=offset)
 
         return meetings or []
 
 
     async def get_meeting(self, meeting_id: int):
-        meeting = await self.meetings_repo.get_meeting_with_relations(meeting_id)
+        meeting = await self.meeting_reader.get_meeting_with_relations(meeting_id)
 
         if not meeting:
             raise HTTPException(

@@ -1,10 +1,28 @@
+from abc import ABC, abstractmethod
+
 from sqlalchemy import select
 
 from src.models.comments import CommentORM
 from src.repositories.repository import SQLAlchemyRepository
 
 
-class CommentsRepository(SQLAlchemyRepository):
+class CommentReader(ABC):
+    @abstractmethod
+    async def get_by_task_id(self, task_id): pass
+
+    @abstractmethod
+    async def find_one(self, instance_id: int): pass
+
+
+class CommentWriter(ABC):
+    @abstractmethod
+    async def add(self, data: dict, author_id: int): pass
+
+    @abstractmethod
+    async def delete(self, comment_id: int): pass
+
+
+class CommentsRepository(SQLAlchemyRepository, CommentReader, CommentWriter):
     model = CommentORM
 
 
@@ -24,7 +42,7 @@ class CommentsRepository(SQLAlchemyRepository):
         await self.session.commit()
 
 
-    async def get(self, task_id):
+    async def get_by_task_id(self, task_id):
         stmt = select(self.model).where(self.model.task_id==task_id)
         results = await self.session.scalars(stmt)
 

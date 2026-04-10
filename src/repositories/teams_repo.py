@@ -38,7 +38,7 @@ class TeamWriter(ABC):
         pass
 
 
-class TeamsRepository(SQLAlchemyRepository, TeamReader):
+class TeamsRepository(SQLAlchemyRepository, TeamReader, TeamWriter):
     model = TeamORM
 
 
